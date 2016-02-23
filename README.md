@@ -7,7 +7,19 @@ docker-machine env docker-flow
 
 eval "$(docker-machine env docker-flow)"
 
-go run src/*.go --host=$DOCKER_HOST --project=books-ms --target=app --side-targets=db --scale=1
+docker run -d \
+    -p "8500:8500" \
+    -h "consul" \
+    progrium/consul -server -bootstrap
+
+go run src/*.go \
+    --host=$DOCKER_HOST \
+    --consul-address=http://192.168.99.100:8500 \
+    --project=books-ms \
+    --target=app \
+    --side-targets=db \
+    --scale=1 \
+    --blue-green
 
 go build src/technologyconversations.com/docker-flow/docker-flow.go
 ```

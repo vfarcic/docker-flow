@@ -5,20 +5,28 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 const dockerComposeFlowPath  = "docker-compose-flow.yml"
 
-func createDockerComposeFlow(dockerComposePath string) error {
+func createDockerComposeFlow(dockerComposePath, target, color string, blueGreen bool) {
 	data, err := ioutil.ReadFile(dockerComposePath)
 	if err != nil {
-		return fmt.Errorf("Could not read the Docker Compose file %s\n%v\n", dockerComposePath, err)
+		fmt.Errorf("Could not read the Docker Compose file %s\n%v\n", dockerComposePath, err)
+		os.Exit(1)
 	}
-	err = ioutil.WriteFile(dockerComposeFlowPath, data, 0644)
+	s := string(data)
+	if blueGreen {
+		old := fmt.Sprintf("%s:", target)
+		new := fmt.Sprintf("%s-%s:", target, color)
+		s = strings.Replace(string(data), old, new, 1)
+	}
+	err = ioutil.WriteFile(dockerComposeFlowPath, []byte(s), 0644)
 	if err != nil {
-		return err
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-	return nil
 }
 
 func removeDockerComposeFlow() {
@@ -42,24 +50,30 @@ func upDockerComposeTargets(host, project string, targets []string) {
 	runDockerComposeCmd(args)
 }
 
-func scaleDockerComposeTargets(host, project, target, scale string) {
-	fmt.Println(scale)
+func scaleDockerComposeTargets(host, consulAddress, project, target, scale string) {
 	args := getDockerComposeArgs(host, project)
 	args = append(args, "scale")
 	// TODO: Change xxx to serviceName
-	args = append(args, fmt.Sprintf("%s=%d", target, getConsulScale("xxx", scale)))
-	fmt.Println(fmt.Sprintf("%s=%d", target, getConsulScale("xxx", scale)))
+	// TODO: Add color to serviceName
+	s := getConsulScale(consulAddress, Opts.ServiceName, scale)
+	args = append(args, fmt.Sprintf("%s=%d", target, s))
 	runDockerComposeCmd(args)
+	putConsulScale(Opts.ConsulAddress, Opts.ServiceName, s)
 }
 
 func rmDockerComposeTargets(host, project string, targets []string) {
+	stopDockerComposeTargets(host, project, targets)
 	args := getDockerComposeArgs(host, project)
-	stopArgs := append(args, "stop")
-	stopArgs = append(stopArgs, targets...)
-	runDockerComposeCmd(stopArgs)
-	rmArgs := append(args, "rm", "-f")
-	rmArgs = append(rmArgs, targets...)
-	runDockerComposeCmd(rmArgs)
+	args = append(args, "rm", "-f")
+	args = append(args, targets...)
+	runDockerComposeCmd(args)
+}
+
+func stopDockerComposeTargets(host, project string, targets []string) {
+	args := getDockerComposeArgs(host, project)
+	args = append(args, "stop")
+	args = append(args, targets...)
+	runDockerComposeCmd(args)
 }
 
 func getDockerComposeArgs(host, project string) []string {
