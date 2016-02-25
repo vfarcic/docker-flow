@@ -5,40 +5,42 @@ import (
 )
 
 func init() {
-	log.SetPrefix("Docker Flow: ")
+	log.SetPrefix(">> Docker Flow: ")
 	log.SetFlags(0)
 }
 
 func main() {
-	opts := Opts{
-		ComposePath: "docker-compose.yml",
-		Scale: "1",
+	log.Println("Parsing arguments...")
+	opts, err := getArgs()
+	if err != nil {
+		log.Fatal(err)
 	}
-	if err := getArgs(&opts); err != nil {
+	dc := DockerComposeImpl{}
+	if err := dc.CreateFlow(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.NextColor, opts.BlueGreen); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := createDockerComposeFlow(opts.ComposePath, opts.Target, opts.NextColor, opts.BlueGreen); err != nil {
+	log.Println("Deploying...")
+	if err := deploy(opts, opts.ServiceDiscovery, dc); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := deploy(opts); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := putConsulColor(opts.ConsulAddress, opts.ServiceName, opts.NextColor); err != nil {
+	log.Println("Cleaning...")
+	// TODO: Move
+	if _, err := opts.ServiceDiscovery.PutColor(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.NextColor); err != nil {
 		log.Fatal(err)
 	}
 	if opts.BlueGreen {
-		if err := createDockerComposeFlow(opts.ComposePath, opts.Target, opts.CurrentColor, opts.BlueGreen); err != nil {
+		if err := dc.CreateFlow(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.CurrentColor, opts.BlueGreen); err != nil {
 			log.Fatal(err)
 		}
-		if err := stopDockerComposeTargets(opts.Host, opts.Project, []string{opts.CurrentTarget}); err != nil {
+		if err := dc.StopTargets(opts.Host, opts.Project, []string{opts.CurrentTarget}); err != nil {
 			log.Fatal(err)
 		}
 	}
+	// TODO: End Move
 
-	if err := removeDockerComposeFlow(); err != nil {
+	if err := dc.RemoveFlow(); err != nil {
 		log.Fatal(err)
 	}
 }

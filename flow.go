@@ -1,8 +1,10 @@
 package main
+// TODO: Switch to methods
+// TODO: Test
 
 import "fmt"
 
-func deploy(opts Opts) error {
+func deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error {
 	targets := make([]string, 0);
 	if !opts.SkipPullTarget {
 		targets = append(targets, opts.NextTarget)
@@ -10,19 +12,24 @@ func deploy(opts Opts) error {
 	if opts.PullSideTargets {
 		targets = append(targets, opts.SideTargets...)
 	}
-	if err := pullDockerComposeTargets(opts.Host, opts.Project, targets); err != nil {
+	if err := dc.PullTargets(opts.Host, opts.Project, targets); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
-	if err := upDockerComposeTargets(opts.Host, opts.Project, opts.SideTargets); err != nil {
+	if err := dc.UpTargets(opts.Host, opts.Project, opts.SideTargets); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
 	if opts.BlueGreen {
-		if err := rmDockerComposeTargets(opts.Host, opts.Project, []string{opts.NextTarget}); err != nil {
+		if err := dc.RmTargets(opts.Host, opts.Project, []string{opts.NextTarget}); err != nil {
 			return fmt.Errorf("The deployment phase failed\n%v", err)
 		}
 	}
-	if err := scaleDockerComposeTargets(opts.Host, opts.ConsulAddress, opts.Project, opts.NextTarget, opts.ServiceName, opts.Scale); err != nil {
+	scale, err := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
+	if err != nil {
+		return err
+	}
+	if err := dc.ScaleTargets(opts.Host, opts.Project, opts.NextTarget, scale); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
+	sc.PutScale(opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 	return nil
 }
