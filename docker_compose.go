@@ -53,60 +53,52 @@ func (dc DockerComposeImpl) RemoveFlow() error {
 	return nil
 }
 
-// TODO: Test
 func (dc DockerComposeImpl) PullTargets(host, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
-	args := dc.getArgs(host, project)
-	args = append(args, "pull")
-	args = append(args, targets...)
-	return dc.runCmd(args)
+	args := append([]string{"pull"}, targets...)
+	return dc.runCmd(host, project, args)
 }
 
-// TODO: Test
 func (dc DockerComposeImpl) UpTargets(host, project string, targets []string) error {
-	args := dc.getArgs(host, project)
-	args = append(args, "up", "-d")
-	args = append(args, targets...)
-	return dc.runCmd(args)
+	if len(targets) == 0 {
+		return nil
+	}
+	args := append([]string{"up", "-d"}, targets...)
+	return dc.runCmd(host, project, args)
 }
 
-// TODO: Test
 func (dc DockerComposeImpl) ScaleTargets(host, project, target string, scale int) error {
-	args := dc.getArgs(host, project)
-	args = append(args, "scale")
-	args = append(args, fmt.Sprintf("%s=%d", target, scale))
-	if err := dc.runCmd(args); err != nil {
-		return err
+	if len(target) == 0 {
+		return nil
 	}
-	return nil
+	args := []string{"scale", fmt.Sprintf("%s=%d", target, scale)}
+	return dc.runCmd(host, project, args)
 }
 
-// TODO: Test
 func (dc DockerComposeImpl) RmTargets(host, project string, targets []string) error {
-	if err := dc.StopTargets(host, project, targets); err != nil {
-		return err
+	if len(targets) == 0 {
+		return nil
 	}
-	args := dc.getArgs(host, project)
-	args = append(args, "rm", "-f")
-	args = append(args, targets...)
-	return dc.runCmd(args)
+	args := append([]string{"rm", "-f"}, targets...)
+	return dc.runCmd(host, project, args)
 }
 
-// TODO: Test
 func (dc DockerComposeImpl) StopTargets(host, project string, targets []string) error {
-	args := dc.getArgs(host, project)
-	args = append(args, "stop")
-	args = append(args, targets...)
-	return dc.runCmd(args)
+	if len(targets) == 0 {
+		return nil
+	}
+	args := append([]string{"stop"}, targets...)
+	return dc.runCmd(host, project, args)
 }
 
 func (dc DockerComposeImpl) getArgs(host, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
 	if (len(host) > 0) {
-		env := os.Environ()
-		env = append(env, fmt.Sprintf("DOCKER_HOST=%s", host))
+		os.Setenv("DOCKER_HOST", host)
+	} else {
+		os.Unsetenv("DOCKER_HOST")
 	}
 	if (len(project) > 0) {
 		args = append(args, "-p", project)
@@ -114,7 +106,8 @@ func (dc DockerComposeImpl) getArgs(host, project string) []string {
 	return args
 }
 
-func (dc DockerComposeImpl) runCmd(args []string) error {
+func (dc DockerComposeImpl) runCmd(host, project string, args []string) error {
+	args = append(dc.getArgs(host, project), args...)
 	cmd := execCmd("docker-compose", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

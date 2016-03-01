@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"os"
 	"fmt"
+	"os/exec"
 )
 
 type DockerComposeTestSuite struct {
@@ -33,9 +34,9 @@ func (s *DockerComposeTestSuite) SetupTest() {
 	removeFile = func(name string) error {
 		return nil
 	}
-//	execCmd = func() error {
-//		return nil
-//	}
+	execCmd = func(name string, arg ...string) *exec.Cmd {
+		return &exec.Cmd{}
+	}
 }
 
 // CreateFlow
@@ -144,12 +145,93 @@ func (s DockerComposeTestSuite) Test_PullTargets_ReturnsNil_WhenTargetsAreEmpty(
 	s.Nil(actual)
 }
 
-//func (s DockerComposeTestSuite) Test_PullTargets_X() {
-//	DockerComposeImpl{}.PullTargets(s.host, s.project, []string{s.target})
-//}
+// PullTargets
+
+func (s DockerComposeTestSuite) Test_PullTargets() {
+	s.testCmd(DockerComposeImpl{}.PullTargets, "pull", s.target)
+}
+
+// UpTargets
+
+func (s DockerComposeTestSuite) Test_UpTargets() {
+	s.testCmd(DockerComposeImpl{}.UpTargets, "up", "-d", s.target)
+}
+
+// ScaleTargets
+
+func (s DockerComposeTestSuite) Test_ScaleTargets_ReturnsNil_WhenTargetIsEmpty() {
+	actual := DockerComposeImpl{}.ScaleTargets(s.host, s.project, "", 8)
+
+	s.Nil(actual)
+}
+
+func (s DockerComposeTestSuite) Test_ScaleTargets_CreatesTheCommand() {
+	var scale = 7
+	expected := []string{"docker-compose", "-f", dockerComposeFlowPath, "-p", s.project, "scale", fmt.Sprintf("%s=%d", s.target, scale)}
+	actual := s.mockExecCmd()
+
+	DockerComposeImpl{}.ScaleTargets(s.host, s.project, s.target, scale)
+
+	s.Equal(expected, *actual)
+}
+
+// RmTargets
+
+func (s DockerComposeTestSuite) Test_RmTargets() {
+	s.testCmd(DockerComposeImpl{}.RmTargets, "rm", "-f", s.target)
+}
+
+// StopTargets
+
+func (s DockerComposeTestSuite) Test_StopTargets() {
+	s.testCmd(DockerComposeImpl{}.StopTargets, "stop", s.target)
+}
 
 // Suite
 
 func TestDockerComposeTestSuite(t *testing.T) {
 	suite.Run(t, new(DockerComposeTestSuite))
+}
+
+// Helper
+
+func (s DockerComposeTestSuite) mockExecCmd() *[]string {
+	var actualCommand []string
+	execCmd = func(name string, arg ...string) *exec.Cmd {
+		actualCommand = append([]string{name}, arg...)
+		cmd := &exec.Cmd{}
+		return cmd
+	}
+	return &actualCommand
+}
+
+type testCmdType func(host, project string, targets []string) error
+
+func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
+	var expected []string
+	var actual *[]string
+
+	// Returns nil when targets are empty
+	s.Nil(f(s.host, s.project, []string{}))
+
+	// Creates command
+	expected = append([]string{"docker-compose", "-f", dockerComposeFlowPath, "-p", s.project}, args...)
+	actual = s.mockExecCmd()
+	f(s.host, s.project, []string{s.target})
+	s.Equal(expected, *actual)
+
+
+	// Does not add project when empty
+	expected = append([]string{"docker-compose", "-f", dockerComposeFlowPath}, args...)
+	actual = s.mockExecCmd()
+	f(s.host, "", []string{s.target})
+	s.Equal(expected, *actual)
+
+	// Adds DOCKER_HOST variable
+	f(s.host, s.project, []string{s.target})
+	s.Contains(os.Environ(), fmt.Sprintf("DOCKER_HOST=%s", s.host))
+
+	// Does not add DOCKER_HOST variable when empty
+	f("", s.project, []string{s.target})
+	s.NotContains(os.Environ(), fmt.Sprintf("DOCKER_HOST=%s", s.host))
 }

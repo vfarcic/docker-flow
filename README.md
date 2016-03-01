@@ -1,4 +1,6 @@
 ```bash
+export GOPATH=~/go/
+
 go run src/*.go --help
 
 docker-machine create --driver virtualbox docker-flow
@@ -9,7 +11,7 @@ eval "$(docker-machine env docker-flow)"
 
 go build
 
-go test
+go test --cover
 
 docker run -d \
     -p "8500:8500" \
