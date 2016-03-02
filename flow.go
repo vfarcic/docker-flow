@@ -1,17 +1,19 @@
 package main
 // TODO: Switch to methods
-// TODO: Test
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error {
-	targets := make([]string, 0);
-	if !opts.SkipPullTarget {
-		targets = append(targets, opts.NextTarget)
-	}
-	if opts.PullSideTargets {
-		targets = append(targets, opts.SideTargets...)
-	}
+type Flow interface {
+	Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error
+	GetTargets(opts Opts) []string
+}
+
+type FlowImpl struct{}
+
+func (flow FlowImpl) Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error {
+	targets := flow.GetTargets(opts)
 	if err := dc.PullTargets(opts.Host, opts.Project, targets); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
@@ -32,4 +34,15 @@ func deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error {
 	}
 	sc.PutScale(opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 	return nil
+}
+
+func (flow FlowImpl) GetTargets(opts Opts) []string {
+	targets := make([]string, 0);
+	if !opts.SkipPullTarget {
+		targets = append(targets, opts.NextTarget)
+	}
+	if opts.PullSideTargets {
+		targets = append(targets, opts.SideTargets...)
+	}
+	return targets
 }

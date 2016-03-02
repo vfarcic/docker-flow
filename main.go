@@ -1,4 +1,5 @@
 package main
+// TODO: Test
 
 import (
 	"log"
@@ -10,18 +11,20 @@ func init() {
 }
 
 func main() {
+	flow := FlowImpl{}
+
 	log.Println("Parsing arguments...")
 	opts, err := getArgs()
 	if err != nil {
 		log.Fatal(err)
 	}
 	dc := DockerComposeImpl{}
-	if err := dc.CreateFlow(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.NextColor, opts.BlueGreen); err != nil {
+	if err := dc.CreateFlowFile(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.NextColor, opts.BlueGreen); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("Deploying...")
-	if err := deploy(opts, opts.ServiceDiscovery, dc); err != nil {
+	if err := flow.Deploy(opts, opts.ServiceDiscovery, dc); err != nil {
 		log.Fatal(err)
 	}
 
@@ -31,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if opts.BlueGreen {
-		if err := dc.CreateFlow(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.CurrentColor, opts.BlueGreen); err != nil {
+		if err := dc.CreateFlowFile(opts.ComposePath, dockerComposeFlowPath, opts.Target, opts.CurrentColor, opts.BlueGreen); err != nil {
 			log.Fatal(err)
 		}
 		if err := dc.StopTargets(opts.Host, opts.Project, []string{opts.CurrentTarget}); err != nil {

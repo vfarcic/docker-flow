@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/mock"
 	"os"
 	"fmt"
 	"os/exec"
@@ -42,7 +43,7 @@ func (s *DockerComposeTestSuite) SetupTest() {
 // CreateFlow
 
 func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsNil() {
-	actual := DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	actual := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Nil(actual)
 }
@@ -52,7 +53,7 @@ func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsError_WhenReadFile() {
 		return []byte(""), fmt.Errorf("Some error")
 	}
 
-	err := DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -64,7 +65,7 @@ func (s DockerComposeTestSuite) Test_CreateFlow_CreatesTheFile() {
 		return nil
 	}
 
-	DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Equal(dockerComposeFlowPath, actual)
 }
@@ -76,7 +77,7 @@ func (s DockerComposeTestSuite) Test_CreateFlow_CreatesDockerComposeReplica() {
 		return []byte(""), nil
 	}
 
-	DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Equal(s.dockerComposePath, actual)
 }
@@ -98,7 +99,7 @@ services:
 		return nil
 	}
 
-	DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, target, color, true)
+	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, target, color, true)
 
 	s.Equal(expected, actual)
 }
@@ -108,7 +109,7 @@ func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsError_WhenWriteFile() {
 		return fmt.Errorf("Some error")
 	}
 
-	err := DockerComposeImpl{}.CreateFlow(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -234,4 +235,60 @@ func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
 	// Does not add DOCKER_HOST variable when empty
 	f("", s.project, []string{s.target})
 	s.NotContains(os.Environ(), fmt.Sprintf("DOCKER_HOST=%s", s.host))
+}
+
+
+// Mock
+
+type DockerComposeMock struct{
+	mock.Mock
+}
+
+func (m *DockerComposeMock) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
+	return nil
+}
+
+func (m *DockerComposeMock) RemoveFlow() error {
+	return nil
+}
+
+func (m *DockerComposeMock) PullTargets(host, project string, targets []string) error {
+	args := m.Called(host, project, targets)
+	return args.Error(0)
+}
+
+func (m *DockerComposeMock) UpTargets(host, project string, targets []string) error {
+	args := m.Called(host, project, targets)
+	return args.Error(0)
+}
+
+func (m *DockerComposeMock) ScaleTargets(host, project, target string, scale int) error {
+	args := m.Called(host, project, target, scale)
+	return args.Error(0)
+}
+
+func (m *DockerComposeMock) RmTargets(host, project string, targets []string) error {
+	args := m.Called(host, project, targets)
+	return args.Error(0)
+}
+
+func (m *DockerComposeMock) StopTargets(host, project string, targets []string) error {
+	return nil
+}
+
+func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
+	mockObj := new(DockerComposeMock)
+	if skipMethod != "PullTargets" {
+		mockObj.On("PullTargets", opts.Host, opts.Project, FlowImpl{}.GetTargets(opts)).Return(nil)
+	}
+	if skipMethod != "UpTargets" {
+		mockObj.On("UpTargets", opts.Host, opts.Project, opts.SideTargets).Return(nil)
+	}
+	if skipMethod != "RmTargets" {
+		mockObj.On("RmTargets", opts.Host, opts.Project, []string{opts.NextTarget}).Return(nil)
+	}
+	if skipMethod != "ScaleTargets" {
+		mockObj.On("ScaleTargets", opts.Host, opts.Project, opts.NextTarget, 5).Return(nil)
+	}
+	return mockObj
 }

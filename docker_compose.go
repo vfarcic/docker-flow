@@ -17,7 +17,7 @@ var removeFile = os.Remove
 var execCmd = exec.Command
 
 type DockerCompose interface {
-	CreateFlow(dcPath, dfPath, target, color string, blueGreen bool) error
+	CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, project string, targets []string) error
 	UpTargets(host, project string, targets []string) error
@@ -28,7 +28,7 @@ type DockerCompose interface {
 
 type DockerComposeImpl struct{}
 
-func (dc DockerComposeImpl) CreateFlow(dcPath, dfPath, target, color string, blueGreen bool) error {
+func (dc DockerComposeImpl) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
 	data, err := readFile(dcPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)

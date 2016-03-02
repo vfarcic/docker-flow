@@ -10,4 +10,3 @@ type ServiceDiscovery interface {
 	PutScale(address, serviceName string, value int) (string, error)
 	PutColor(address, serviceName, value string) (string, error)
 }
-
