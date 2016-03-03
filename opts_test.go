@@ -188,7 +188,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
 	expected := "tcp://5.5.5.5.:4444"
 	os.Setenv("DOCKER_HOST", expected)
 
-	processOpts(&s.opts)
+	fmt.Println(ProcessOpts(&s.opts))
 
 	s.Equal(expected, s.opts.Host)
 }
