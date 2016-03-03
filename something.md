@@ -43,7 +43,6 @@ https://github.com/vfarcic/ms-lifecycle/blob/master/ansible/roles/jenkins/files/
 TODO
 ====
 
-* Add to Travis/CircleCI
 * Write README
   * Explain the flow
   * Roadmap
@@ -53,5 +52,5 @@ TODO
   * Explain command line arguments
     * side-target can be specified multiple times
   * Explain the order between YAML, env, and arguments
-* Create a release (binary and Docker)
+* Create a release
 * Write an article
