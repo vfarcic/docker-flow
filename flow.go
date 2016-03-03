@@ -1,5 +1,4 @@
-package main
-// TODO: Switch to methods
+package dockerflow
 
 import (
 	"fmt"

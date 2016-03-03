@@ -1,4 +1,4 @@
-package main
+package dockerflow
 
 import (
 	"github.com/stretchr/testify/mock"
@@ -35,10 +35,20 @@ func (m *ServiceDiscoveryMock) PutColor(address, serviceName, value string) (str
 	return args.String(0), args.Error(1)
 }
 
-func getServiceDiscoveryMock(opts Opts) *ServiceDiscoveryMock {
+func getServiceDiscoveryMock(opts Opts, skipMethod string) *ServiceDiscoveryMock {
 	mockObj := new(ServiceDiscoveryMock)
 	scaleCalc := 5
-	mockObj.On("GetScaleCalc", opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale).Return(scaleCalc, nil)
-	mockObj.On("PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scaleCalc).Return("", nil)
+	if (skipMethod != "GetScaleCalc") {
+		mockObj.On("GetScaleCalc", opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale).Return(scaleCalc, nil)
+	}
+	if (skipMethod != "PutScale") {
+		mockObj.On("PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scaleCalc).Return("", nil)
+	}
+	if (skipMethod != "GetColor") {
+		mockObj.On("GetColor", opts.ServiceDiscoveryAddress, opts.ServiceName).Return("orange", nil)
+	}
+	if (skipMethod != "GetNextColor") {
+		mockObj.On("GetNextColor", opts.CurrentColor).Return("pink")
+	}
 	return mockObj
 }

@@ -1,6 +1,4 @@
-package main
-// TODO: Switch to methods
-// TODO: Test
+package dockerflow
 
 import (
 	"os"
@@ -8,11 +6,18 @@ import (
 	"fmt"
 	"strings"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"github.com/kelseyhightower/envconfig"
+	"strconv"
 )
 
 const dockerFlowPath  = "docker-flow.yml"
+const dockerComposePath = "docker-compose.yml"
+
+var getWd = os.Getwd
+var parseYml = ParseYml
+var parseEnvVars = ParseEnvVars
+var parseArgs = ParseArgs
+var processOpts = ProcessOpts
 
 type Opts struct {
 	Host					string 		`short:"H" long:"host" description:"Docker host"`
@@ -20,7 +25,7 @@ type Opts struct {
 	WebServer   			bool 		`short:"w" long:"web-server" description:"Whether a Web server should be started" yaml:"web_server" envconfig:"web_server"`
 	BlueGreen				bool 		`short:"b" long:"blue-green" description:"Whether to perform blue-green desployment" yaml:"blue_green" envconfig:"blue_green"`
 	Target					string 		`short:"t" long:"target" description:"Docker Compose target that will be deployed"`
-	SideTargets             []string 	`short:"T" long:"side-targets" description:"Side or auxiliary targets that will be deployed. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
+	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary targets that will be deployed. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
 	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Whether to skip pulling target." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
 	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Whether side or auxiliary targets should be pulled." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, current directory will be used instead."`
@@ -34,28 +39,27 @@ type Opts struct {
 	NextTarget      		string
 }
 
-// TODO
-func getArgs() (Opts, error) {
+func GetOpts() (Opts, error) {
 	opts := Opts{
-		ComposePath: "docker-compose.yml",
+		ComposePath: dockerComposePath,
 	}
 	if err := parseYml(&opts); err != nil {
 		return opts, err
 	}
-	if err := parseEnvironmentVars(&opts); err != nil {
+	if err := parseEnvVars(&opts); err != nil {
 		return opts, err
 	}
 	if err := parseArgs(&opts); err != nil {
 		return opts, err
 	}
-	if err := parseOpts(&opts); err != nil {
+	if err := processOpts(&opts); err != nil {
 		return opts, err
 	}
 	return opts, nil
 }
 
-func parseYml(opts *Opts) error {
-	data, err := ioutil.ReadFile(dockerFlowPath)
+func ParseYml(opts *Opts) error {
+	data, err := readFile(dockerFlowPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Flow file %s\n%v", dockerFlowPath, err)
 	}
@@ -65,7 +69,7 @@ func parseYml(opts *Opts) error {
 	return nil
 }
 
-func parseArgs(opts *Opts) error {
+func ParseArgs(opts *Opts) error {
 	if _, err := flags.ParseArgs(opts, os.Args[1:]); err != nil {
 		return fmt.Errorf("Could not parse command line arguments\n%v", err)
 	}
@@ -73,17 +77,20 @@ func parseArgs(opts *Opts) error {
 }
 
 
-func parseEnvironmentVars(opts *Opts) error {
+func ParseEnvVars(opts *Opts) error {
 	if err := envconfig.Process("flow", opts); err != nil {
 		return fmt.Errorf("Could not retrieve environment variables\n%v", err)
 	}
+	opts.SideTargets = strings.Split(os.Getenv("FLOW_SIDE_TARGETS"), ",")
 	return nil
 }
 
-func parseOpts(opts *Opts) (err error) {
-	opts.ServiceDiscovery = Consul{}
+func ProcessOpts(opts *Opts) (err error) {
+	if opts.ServiceDiscovery == nil {
+		opts.ServiceDiscovery = Consul{}
+	}
 	if len(opts.Project) == 0 {
-		dir, _ := os.Getwd()
+		dir, _ := getWd()
 		opts.Project = dir[strings.LastIndex(dir, "/") + 1:]
 	}
 	if len(opts.Target) == 0 {
@@ -92,10 +99,15 @@ func parseOpts(opts *Opts) (err error) {
 	if len(opts.ServiceDiscoveryAddress) == 0 {
 		return fmt.Errorf("consul-address argument is required")
 	}
-	//	TODO: Verify that scale is a number (with or without +/-)
-	opts.ServiceName = fmt.Sprintf("%s_%s", opts.Project, opts.Target)
-	opts.CurrentColor, err = opts.ServiceDiscovery.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName)
-	if err != nil {
+	if len(opts.Scale) != 0 {
+		if _, err := strconv.Atoi(opts.Scale); err != nil {
+			return fmt.Errorf("scale must be a number or empty")
+		}
+	}
+	if len(opts.ServiceName) == 0 {
+		opts.ServiceName = fmt.Sprintf("%s-%s", opts.Project, opts.Target)
+	}
+	if opts.CurrentColor, err = opts.ServiceDiscovery.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName); err != nil {
 		return err
 	}
 	opts.NextColor = opts.ServiceDiscovery.GetNextColor(opts.CurrentColor)
@@ -106,6 +118,6 @@ func parseOpts(opts *Opts) (err error) {
 		opts.NextTarget = opts.Target
 		opts.CurrentTarget = opts.Target
 	}
-	return err
+	return nil
 }
 

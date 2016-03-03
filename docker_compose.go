@@ -1,20 +1,14 @@
-package main
+package dockerflow
 // TODO: Switch to methods
 // TODO: Test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 )
 
 const dockerComposeFlowPath  = "docker-compose-flow.yml.tmp"
-var readFile = ioutil.ReadFile
-var writeFile = ioutil.WriteFile
-var removeFile = os.Remove
-var execCmd = exec.Command
 
 type DockerCompose interface {
 	CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error

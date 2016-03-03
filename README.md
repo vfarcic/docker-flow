@@ -13,6 +13,10 @@ go build
 
 go test --cover
 
+go test -coverprofile=coverage.out
+
+go tool cover -func=coverage.out
+
 docker run -d \
     -p "8500:8500" \
     -h "consul" \
@@ -39,11 +43,17 @@ https://github.com/vfarcic/ms-lifecycle/blob/master/ansible/roles/jenkins/files/
 TODO
 ====
 
+* Automated tests
+* Dockerize
 * Add to Travis/CircleCI
 * Write README
-* Explain the flow
-* Roadmap
-* Explain YAML
-* Explain Environment variables
-* Explain command line arguments
-* Explain the order between YAML, env, and arguments
+  * Explain the flow
+  * Roadmap
+  * Explain YAML
+  * Explain Environment variables
+    * Multiple values in FLOW_SIDE_TARGETS should be separated by comma (,)
+  * Explain command line arguments
+    * side-target can be specified multiple times
+  * Explain the order between YAML, env, and arguments
+* Create a release (binary and Docker)
+* Write an article

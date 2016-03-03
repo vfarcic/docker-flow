@@ -1,4 +1,4 @@
-package main
+package dockerflow
 // TODO: Test
 
 import (
@@ -14,7 +14,7 @@ func main() {
 	flow := FlowImpl{}
 
 	log.Println("Parsing arguments...")
-	opts, err := getArgs()
+	opts, err := GetOpts()
 	if err != nil {
 		log.Fatal(err)
 	}
