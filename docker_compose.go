@@ -1,6 +1,4 @@
 package dockerflow
-// TODO: Switch to methods
-// TODO: Test
 
 import (
 	"fmt"

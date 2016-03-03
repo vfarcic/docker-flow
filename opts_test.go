@@ -4,7 +4,6 @@ import (
 	"testing"
 	"github.com/stretchr/testify/suite"
 	"fmt"
-//	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/mock"
 	"os"
 	"strings"
@@ -243,6 +242,17 @@ func (s OptsTestSuite) TestParseEnvVars_Slices() {
 		s.Equal(strings.Split(d.expected, ","), *d.value)
 	}
 }
+
+func (s OptsTestSuite) TestParseEnvVars_ReturnsError_WhenFailure() {
+	os.Setenv("FLOW_WEB_SERVER", "This is not a bool")
+
+	actual := ParseEnvVars(&s.opts)
+
+	s.Error(actual)
+	os.Unsetenv("FLOW_WEB_SERVER")
+}
+
+// ParseArgs
 
 func (s OptsTestSuite) TestParseArgs_ReturnsError_WhenFailure() {
 	os.Args = []string{"myProgram", "--this-flag-does-not-exist=something"}

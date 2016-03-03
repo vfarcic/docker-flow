@@ -288,7 +288,7 @@ func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 		mockObj.On("RmTargets", opts.Host, opts.Project, []string{opts.NextTarget}).Return(nil)
 	}
 	if skipMethod != "ScaleTargets" {
-		mockObj.On("ScaleTargets", opts.Host, opts.Project, opts.NextTarget, 5).Return(nil)
+		mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	return mockObj
 }

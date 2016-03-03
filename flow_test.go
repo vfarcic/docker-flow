@@ -109,6 +109,19 @@ func Test_DeployReturnsError_WhenRmTargetsFails(t *testing.T) {
 	assert.Error(t, actual)
 }
 
+// Deploy > GetScaleCalc
+
+func Test_DeployReturnsError_WhenGetScaleCalcFails(t *testing.T) {
+	opts := Opts{}
+	mockObj := getDockerComposeMock(opts, "")
+	sc := getServiceDiscoveryMock(opts, "GetScaleCalc")
+	sc.On("GetScaleCalc", mock.Anything, mock.Anything, mock.Anything).Return(0, fmt.Errorf("This is an error"))
+
+	actual := FlowImpl{}.Deploy(opts, sc, mockObj)
+
+	assert.Error(t, actual)
+}
+
 // Deploy > ScaleTargets
 
 func Test_DeployInvokesScaleTargets(t *testing.T) {
