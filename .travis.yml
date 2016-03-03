@@ -7,5 +7,5 @@ before_install:
 script:
   - go test -v ./...
 after_success:
-  - gox -output "dist/{{.OS}}_{{.Arch}}/{{.Dir}}"
+  - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v0.1.0 dist/
