@@ -8,4 +8,4 @@ script:
   - go test -v ./...
 after_success:
   - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
-  - ghr --username vfarcic --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
+  - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v0.1.0 dist/
