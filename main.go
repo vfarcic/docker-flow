@@ -1,4 +1,4 @@
-package dockerflow
+package main
 // TODO: Test
 
 import (

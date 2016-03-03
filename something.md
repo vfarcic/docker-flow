@@ -11,7 +11,7 @@ eval "$(docker-machine env docker-flow)"
 
 go build
 
-go test --cover
+go test --cover -v
 
 go test -coverprofile=coverage.out dockerflow
 

@@ -1,4 +1,4 @@
-package dockerflow
+package main
 
 const BlueColor = "blue"
 const GreenColor = "green"

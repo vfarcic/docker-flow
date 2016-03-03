@@ -1,4 +1,4 @@
-package dockerflow
+package main
 
 import (
 	"github.com/stretchr/testify/mock"
