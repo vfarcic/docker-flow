@@ -183,6 +183,16 @@ func (s OptsTestSuite) TestProcessOpts_SetsCurrentTargetToTargetAndCurrentColor_
 	s.Equal(expected, s.opts.CurrentTarget)
 }
 
+func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
+	s.opts.Host = ""
+	expected := "tcp://5.5.5.5.:4444"
+	os.Setenv("DOCKER_HOST", expected)
+
+	processOpts(&s.opts)
+
+	s.Equal(expected, s.opts.Host)
+}
+
 // ParseEnvVars
 
 func (s OptsTestSuite) TestParseEnvVars_Strings() {
@@ -191,7 +201,7 @@ func (s OptsTestSuite) TestParseEnvVars_Strings() {
 		key 		string
 		value		*string
 	}{
-		{"myHost", 				"FLOW_HOST", 			&s.opts.Host},
+		{"myHost", 				"FLOW_HOST", 	&s.opts.Host},
 		{"myComposePath", 		"FLOW_COMPOSE_PATH", 	&s.opts.ComposePath},
 		{"myTarget", 			"FLOW_TARGET", 			&s.opts.Target},
 		{"myProject", 			"FLOW_PROJECT", 		&s.opts.Project},

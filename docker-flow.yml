@@ -1,12 +1,4 @@
-host: tcp://192.168.99.100:2376
-compose_path: docker-compose.yml
-web_server: false
-blue_green: false
 target: app
 side_targets:
   - db
-skip_pull_target: false
-pull_side_targets: false
-project: books-ms
-scale: 1
-consul_address: http://192.168.99.100:8500
+blue_green: true

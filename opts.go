@@ -20,10 +20,10 @@ var parseArgs = ParseArgs
 var processOpts = ProcessOpts
 
 type Opts struct {
-	Host					string 		`short:"H" long:"host" description:"Docker host"`
+	Host        			string 		`short:"H" long:"host" description:"Docker host"`
 	ComposePath 			string 		`short:"f" long:"compose-path" description:"Docker Compose configuration file" yaml:"compose_path" envconfig:"compose_path"`
 	WebServer   			bool 		`short:"w" long:"web-server" description:"Whether a Web server should be started" yaml:"web_server" envconfig:"web_server"`
-	BlueGreen				bool 		`short:"b" long:"blue-green" description:"Whether to perform blue-green desployment" yaml:"blue_green" envconfig:"blue_green"`
+	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Whether to perform blue-green desployment" yaml:"blue_green" envconfig:"blue_green"`
 	Target					string 		`short:"t" long:"target" description:"Docker Compose target that will be deployed"`
 	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary targets that will be deployed. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
 	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Whether to skip pulling target." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
@@ -109,6 +109,9 @@ func ProcessOpts(opts *Opts) (err error) {
 	}
 	if opts.CurrentColor, err = opts.ServiceDiscovery.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName); err != nil {
 		return err
+	}
+	if len(opts.Host) == 0 {
+		opts.Host = os.Getenv("DOCKER_HOST")
 	}
 	opts.NextColor = opts.ServiceDiscovery.GetNextColor(opts.CurrentColor)
 	if opts.BlueGreen {
