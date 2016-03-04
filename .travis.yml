@@ -1,11 +1,10 @@
 language: go
 
-before_install:
-  - go get github.com/mitchellh/gox
-  - gox -build-toolchain
-  - go get github.com/tcnksm/ghr
 script:
   - go test -v ./...
 after_success:
+  - go get github.com/mitchellh/gox
+  - gox -build-toolchain
+  - go get github.com/tcnksm/ghr
   - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v0.1.1 dist/
