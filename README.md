@@ -19,6 +19,8 @@ Running Docker Flow
 
 The following examples will setup and environment with Docker Engine and Consul, and will assume that you already the [Docker Toolbox](https://www.docker.com/products/docker-toolbox) installed. Even though the examples will be run through the Docker Toolbox Terminal, feel free to apply them to your existing setup. You can run them on any of your Docker servers or, even better, inside a Docker Swarm cluster.
 
+Let's start.
+
 ```bash
 # Launch the Docker Toolbox Terminal
 
