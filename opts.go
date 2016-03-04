@@ -20,18 +20,17 @@ var parseArgs = ParseArgs
 var processOpts = ProcessOpts
 
 type Opts struct {
-	Host        			string 		`short:"H" long:"host" description:"Docker host"`
-	ComposePath 			string 		`short:"f" long:"compose-path" description:"Docker Compose configuration file" yaml:"compose_path" envconfig:"compose_path"`
-	WebServer   			bool 		`short:"w" long:"web-server" description:"Whether a Web server should be started" yaml:"web_server" envconfig:"web_server"`
-	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Whether to perform blue-green desployment" yaml:"blue_green" envconfig:"blue_green"`
-	Target					string 		`short:"t" long:"target" description:"Docker Compose target that will be deployed"`
-	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary targets that will be deployed. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
-	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Whether to skip pulling target." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
-	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Whether side or auxiliary targets should be pulled." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
+	Host        			string 		`short:"H" long:"host" description:"Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead."`
+	ComposePath 			string 		`short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file." yaml:"compose_path" envconfig:"compose_path"`
+	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Perform blue-green desployment." yaml:"blue_green" envconfig:"blue_green"`
+	Target					string 		`short:"t" long:"target" description:"Docker Compose target."`
+	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
+	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Skip pulling targets." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
+	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, current directory will be used instead."`
-	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the consul server." yaml:"consul_address" envconfig:"consul_address"`
-	Scale                   string		`short:"s" long:"scale" description:"Number of instances that should be deployed. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number."`
-	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Available values: deploy, scale, and stop-old. Default value is deploy" yaml:"flow" envconfig:"flow"`
+	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the C	onsul server." yaml:"consul_address" envconfig:"consul_address"`
+	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number."`
+	Flow		            []string 	`short:"F" long:"flow" choice:"deploy" choice:"scale" choice:"stop-old" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
 	ServiceDiscovery        ServiceDiscovery
 	ServiceName             string
 	CurrentColor    		string
@@ -43,6 +42,7 @@ type Opts struct {
 func GetOpts() (Opts, error) {
 	opts := Opts{
 		ComposePath: dockerComposePath,
+		Flow: []string{"deploy"},
 	}
 	if err := parseYml(&opts); err != nil {
 		return opts, err

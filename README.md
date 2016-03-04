@@ -171,7 +171,7 @@ It is up to you to choose whether you prefer command line arguments, YML specifi
 Let's repeat the deployment. This time we'll specify the Consul address as an environment variable and use the *docker-flow.yml* for the rest of arguments.
 
 ```bash
-export CONSUL_ADDRESS=http://$CONSUL_IP:8500
+export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
 
 ./docker-flow --flow=deploy
 
@@ -304,6 +304,42 @@ This is the very beginning of the *Docker Flow* project. The main idea behind it
 
 README
 ======
+
+*Docker Flow* is a project aimed towards creating an easy to use continuous deployment flow. It uses [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/).
+
+The current list of features is as follows.
+
+* Blue-green deployment
+* Relative scaling
+
+The latest release can be found [here](https://github.com/vfarcic/docker-flow/releases/latest).
+
+Arguments
+---------
+
+Arguments can be specified thorough *docker-flow.yml* file, environment variables, and command line arguments. If the same argument is specified in several places, command line overwrites all others and environment variables overwrite *docker-flow.yml*.
+
+|Comm. argument|Env. var.|YML|Description|
+|--------------|---------|---|-----------|
+|-H, --host|FLOW_HOST|host|Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
+|-f, --compose-path|FLOW_COMPOSE_PATH|compose_path|Path to the Docker Compose configuration file. (default: docker-compose.yml)|
+|-b, --blue-green|FLOW_BLUE_GREEN|blue_green|Perform blue-green desployment.|
+|-t, --target|FLOW_TARGET|target|Docker Compose target.|
+|-T, --side-target|FLOW_SIDE_TARGETS|side_targets|Side or auxiliary Docker Compose targets. Multiple values are allowed.|
+|-P, --skip-pull-targets|FLOW_SKIP_PULL_TARGET|skip_pull_target|Skip pulling targets.|
+|-S, --pull-side-targets|FLOW_PULL_SIDE_TARGETS|pull_side_targets|Pull side or auxiliary targets.|
+|-p, --project|FLOW_PROJECT|project|Docker Compose project. If not specified, current directory will be used instead.|
+|-c, --consul-address|FLOW_CONSUL_ADDRESS|consul_address|The address of the Consul server.|
+|-s, --scale|FLOW_SCALE|scale|Number of instances to deploy. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number.|
+|-F, --flow|FLOW|flow|The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>(default: [deploy])|
+
+required?
+Explain strings, bools, and slices
+
+For information regarding features and motivations behind this project, please read the [TODO](TODO) article.
+
+TODO
+====
 
 * Explain YAML
 * Explain Environment variables

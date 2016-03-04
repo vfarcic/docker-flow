@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"strings"
+	"os"
 )
 
 func init() {
@@ -14,10 +15,9 @@ func init() {
 func main() {
 	flow := FlowImpl{}
 
-	log.Println("Parsing arguments...")
 	opts, err := GetOpts()
 	if err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 	dc := DockerComposeImpl{}
 
