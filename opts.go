@@ -28,9 +28,9 @@ type Opts struct {
 	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Skip pulling targets." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
 	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, current directory will be used instead."`
-	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the C	onsul server." yaml:"consul_address" envconfig:"consul_address"`
+	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
 	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number."`
-	Flow		            []string 	`short:"F" long:"flow" choice:"deploy" choice:"scale" choice:"stop-old" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
+	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
 	ServiceDiscovery        ServiceDiscovery
 	ServiceName             string
 	CurrentColor    		string

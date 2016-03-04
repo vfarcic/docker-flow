@@ -229,7 +229,6 @@ func (s OptsTestSuite) TestParseEnvVars_Bools() {
 		key 		string
 		value		*bool
 	}{
-		{"FLOW_WEB_SERVER", 		&s.opts.WebServer},
 		{"FLOW_BLUE_GREEN", 		&s.opts.BlueGreen},
 		{"FLOW_SKIP_PULL_TARGET", 	&s.opts.SkipPullTarget},
 		{"FLOW_PULL_SIDE_TARGETS", 	&s.opts.PullSideTargets},
@@ -279,12 +278,12 @@ func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
 }
 
 func (s OptsTestSuite) TestParseEnvVars_ReturnsError_WhenFailure() {
-	os.Setenv("FLOW_WEB_SERVER", "This is not a bool")
+	os.Setenv("FLOW_BLUE_GREEN", "This is not a bool")
 
 	actual := ParseEnvVars(&s.opts)
 
 	s.Error(actual)
-	os.Unsetenv("FLOW_WEB_SERVER")
+	os.Unsetenv("FLOW_BLUE_GREEN")
 }
 
 // ParseArgs
@@ -344,7 +343,6 @@ func (s OptsTestSuite) TestParseArgs_LongBools() {
 		key 		string
 		value		*bool
 	}{
-		{"web-server", &s.opts.WebServer},
 		{"blue-green", &s.opts.BlueGreen},
 		{"skip-pull-targets", &s.opts.SkipPullTarget},
 		{"pull-side-targets", &s.opts.PullSideTargets},
@@ -362,7 +360,6 @@ func (s OptsTestSuite) TestParseArgs_ShortBools() {
 		key 		string
 		value		*bool
 	}{
-		{"w", &s.opts.WebServer},
 		{"b", &s.opts.BlueGreen},
 		{"P", &s.opts.SkipPullTarget},
 		{"S", &s.opts.PullSideTargets},
@@ -457,7 +454,6 @@ func (s OptsTestSuite) TestParseYml_SetsOpts() {
 	yml := fmt.Sprintf(`
 host: %s
 compose_path: %s
-web_server: true
 blue_green: true
 target: %s
 side_targets:
@@ -480,7 +476,6 @@ flow:
 
 	s.Equal(host, s.opts.Host)
 	s.Equal(composePath, s.opts.ComposePath)
-	s.True(s.opts.WebServer)
 	s.True(s.opts.BlueGreen)
 	s.Equal(target, s.opts.Target)
 	s.Equal([]string{sideTarget1, sideTarget2}, s.opts.SideTargets)
