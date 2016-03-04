@@ -24,11 +24,18 @@ func (flow FlowImpl) Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) er
 			return fmt.Errorf("The deployment phase failed\n%v", err)
 		}
 	}
+	if err := flow.Scale(opts, sc, dc, opts.NextTarget); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (flow FlowImpl) Scale(opts Opts, sc ServiceDiscovery, dc DockerCompose, target string) error {
 	scale, err := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
 	if err != nil {
 		return err
 	}
-	if err := dc.ScaleTargets(opts.Host, opts.Project, opts.NextTarget, scale); err != nil {
+	if err := dc.ScaleTargets(opts.Host, opts.Project, target, scale); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
 	sc.PutScale(opts.ServiceDiscoveryAddress, opts.ServiceName, scale)

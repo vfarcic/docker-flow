@@ -31,6 +31,7 @@ type Opts struct {
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, current directory will be used instead."`
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the consul server." yaml:"consul_address" envconfig:"consul_address"`
 	Scale                   string		`short:"s" long:"scale" description:"Number of instances that should be deployed. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number."`
+	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Available values: deploy, scale, and stop-old. Default value is deploy" yaml:"flow" envconfig:"flow"`
 	ServiceDiscovery        ServiceDiscovery
 	ServiceName             string
 	CurrentColor    		string
@@ -81,9 +82,18 @@ func ParseEnvVars(opts *Opts) error {
 	if err := envconfig.Process("flow", opts); err != nil {
 		return fmt.Errorf("Could not retrieve environment variables\n%v", err)
 	}
-	targetsString := strings.Trim(os.Getenv("FLOW_SIDE_TARGETS"), " ")
-	if len(targetsString) > 0 {
-		opts.SideTargets = strings.Split(targetsString, ",")
+	data := []struct{
+		key 		string
+		value		*[]string
+	}{
+		{"FLOW_SIDE_TARGETS", &opts.SideTargets},
+		{"FLOW", &opts.Flow},
+	}
+	for _, d := range data {
+		value := strings.Trim(os.Getenv(d.key), " ")
+		if len(value) > 0 {
+			*d.value = strings.Split(value, ",")
+		}
 	}
 	return nil
 }
@@ -106,6 +116,9 @@ func ProcessOpts(opts *Opts) (err error) {
 		if _, err := strconv.Atoi(opts.Scale); err != nil {
 			return fmt.Errorf("scale must be a number or empty")
 		}
+	}
+	if len(opts.Flow) == 0 {
+		opts.Flow = []string{"deploy"}
 	}
 	if len(opts.ServiceName) == 0 {
 		opts.ServiceName = fmt.Sprintf("%s-%s", opts.Project, opts.Target)

@@ -193,6 +193,13 @@ func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
 	s.Equal(expected, s.opts.Host)
 }
 
+func (s OptsTestSuite) TestProcessOpts_SetsFlowToDeploy_WhenEmpty() {
+	expected := []string{"deploy"}
+	s.opts.Flow = []string{}
+	ProcessOpts(&s.opts)
+	s.Equal(expected, s.opts.Flow)
+}
+
 // ParseEnvVars
 
 func (s OptsTestSuite) TestParseEnvVars_Strings() {
@@ -243,6 +250,7 @@ func (s OptsTestSuite) TestParseEnvVars_Slices() {
 		value		*[]string
 	}{
 		{"myTarget1,myTarget2", "FLOW_SIDE_TARGETS", &s.opts.SideTargets},
+		{"deploy,stop-old", "FLOW", &s.opts.Flow},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -374,6 +382,7 @@ func (s OptsTestSuite) TestParseArgs_LongSlices() {
 		value		*[]string
 	}{
 		{[]string{"target1", "target2"}, "side-target", &s.opts.SideTargets},
+		{[]string{"deploy", "stop-old"}, "flow", &s.opts.Flow},
 	}
 
 	for _, d := range data {
@@ -393,6 +402,7 @@ func (s OptsTestSuite) TestParseArgs_ShortSlices() {
 		value		*[]string
 	}{
 		{[]string{"target1", "target2"}, "T", &s.opts.SideTargets},
+		{[]string{"flow", "stop-old"}, "F", &s.opts.Flow},
 	}
 
 	for _, d := range data {
@@ -442,6 +452,8 @@ func (s OptsTestSuite) TestParseYml_SetsOpts() {
 	project := "projectFromYml"
 	consulAddress := "consulAddressFromYml"
 	scale := "scaleFromYml"
+	flow1 := "deploy"
+	flow2 := "stop-old"
 	yml := fmt.Sprintf(`
 host: %s
 compose_path: %s
@@ -456,7 +468,10 @@ pull_side_targets: true
 project: %s
 consul_address: %s
 scale: %s
-`, host, composePath, target, sideTarget1, sideTarget2, project, consulAddress, scale)
+flow:
+  - %s
+  - %s
+`, host, composePath, target, sideTarget1, sideTarget2, project, consulAddress, scale, flow1, flow2)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
 	}
@@ -474,6 +489,7 @@ scale: %s
 	s.Equal(project, s.opts.Project)
 	s.Equal(consulAddress, s.opts.ServiceDiscoveryAddress)
 	s.Equal(scale, s.opts.Scale)
+	s.Equal([]string{flow1, flow2}, s.opts.Flow)
 }
 
 // GetOpts

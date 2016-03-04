@@ -170,6 +170,67 @@ func Test_DeployInvokesPutScale(t *testing.T) {
 	sc.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 }
 
+// Scale > GetScaleCalc
+
+func Test_ScaleReturnsError_WhenGetScaleCalcFails(t *testing.T) {
+	opts := Opts{}
+	mockObj := getDockerComposeMock(opts, "")
+	sc := getServiceDiscoveryMock(opts, "GetScaleCalc")
+	sc.On("GetScaleCalc", mock.Anything, mock.Anything, mock.Anything).Return(0, fmt.Errorf("This is an error"))
+
+	actual := FlowImpl{}.Scale(opts, sc, mockObj, "myTarget")
+
+	assert.Error(t, actual)
+}
+
+// Scale > ScaleTargets
+
+func Test_ScaleInvokesScaleTargets(t *testing.T) {
+	opts := Opts{
+		Host: "myHost",
+		Project: "myProject",
+		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
+		ServiceName: "myService",
+		Scale: "34",
+	}
+	mockObj := getDockerComposeMock(opts, "")
+	flow := FlowImpl{}
+	sc := getServiceDiscoveryMock(opts, "")
+	target := "myTarget"
+	scale, _ := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
+
+	flow.Scale(opts, sc, mockObj, target)
+
+	mockObj.AssertCalled(t, "ScaleTargets", opts.Host, opts.Project, target, scale)
+}
+
+func Test_ScaleReturnsError_WhenScaleTargetsFails(t *testing.T) {
+	opts := Opts{}
+	mockObj := getDockerComposeMock(opts, "ScaleTargets")
+	mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+
+	actual := FlowImpl{}.Scale(opts, getServiceDiscoveryMock(opts, ""), mockObj, "myTarget")
+
+	assert.Error(t, actual)
+}
+
+// Scale > PutScale
+
+func Test_ScaleInvokesPutScale(t *testing.T) {
+	opts := Opts{
+		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
+		ServiceName: "myService",
+		Scale: "34",
+	}
+	mockObj := getDockerComposeMock(opts, "")
+	sc := getServiceDiscoveryMock(opts, "")
+	scale, _ := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
+
+	FlowImpl{}.Scale(opts, sc, mockObj, "myTarget")
+
+	sc.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
+}
+
 // GetTargets
 
 func Test_GetTargetsReturnsAllTargets(t *testing.T) {
