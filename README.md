@@ -1,9 +1,12 @@
 Docker Flow
 ===========
 
-Since the first time I laid my hand on Docker, I started writing my own scripts that I've been running as my continuous deployment flow. I ended up with Shell scripts, Ansible playbooks, Chef cookbooks, Jenkins Pipelines, and so on. Each of those had a similar (not to say the same) objective inside a different context. I realized that was a huge waste of time and decided to create a single executable that I'll be able to run no matter the tools I'm using to execute the continuous deployment pipeline. The result is a birth of the [Docker Flow](https://github.com/vfarcic/docker-flow) project.
+Since the first time I laid my hand on Docker, I started writing my own scripts that I've been running as my continuous deployment flow. I ended up with Shell scripts, Ansible playbooks, Chef cookbooks, Jenkins Pipelines, and so on. Each of those had a similar (not to say the same) objective inside a different context. I realized that was a huge waste of time and decided to create a single executable that I'll be able to run no matter the tool I'm using to execute the continuous deployment pipeline. The result is a birth of the [Docker Flow](https://github.com/vfarcic/docker-flow) project.
 
-The goal of the project is to add features and processes that are currently missing inside the Docker ecosystem. The project is in its infancy and solves only the problem of *blue-green deployments* and *relative scaling*. Many additional features will be added very soon.
+Features
+========
+
+The goal of the project is to add features and processes that are currently missing inside the Docker ecosystem. The project is in its infancy and solves only the problems of *blue-green deployments* and *relative scaling*. Many additional features will be added very soon.
 
 I'll restrain myself from explaining *blue-green deployment* since I already wrote quite a few articles on this subject. If you are not already familiar with it, please read the [Blue-Green Deployment](http://technologyconversations.com/2016/02/08/blue-green-deployment/) article. For a more hands-on example with Jenkins Pipeline, please read the [Blue-Green Deployment To Docker Swarm with Jenkins Workflow Plugin](http://technologyconversations.com/2015/12/08/blue-green-deployment-to-docker-swarm-with-jenkins-workflow-plugin/) post. Finally, for another practical example in a much broader context (and without Jenkins), please consult the [Scaling To Infinity with Docker Swarm, Docker Compose and Consul](http://technologyconversations.com/2015/07/02/scaling-to-infinity-with-docker-swarm-docker-compose-and-consul-part-14-a-taste-of-what-is-to-come/) series.
 
@@ -14,18 +17,21 @@ Running Docker Flow
 
 **Docker Flow** requirements are [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/).
 
-The following examples will setup and environment with Docker Engine and Consul, and will assume that you already the [Docker Toolbox](https://www.docker.com/products/docker-toolbox) installed.
+The following examples will setup and environment with Docker Engine and Consul, and will assume that you already the [Docker Toolbox](https://www.docker.com/products/docker-toolbox) installed. Even though the examples will be run through the Docker Toolbox Terminal, feel free to apply them to your existing setup. You can run them on any of your Docker servers or, even better, inside a Docker Swarm cluster.
 
 ```bash
+# Launch the Docker Toolbox Terminal
+
 git clone https://github.com/vfarcic/docker-flow
 
 cd docker-flow
 
-# Please download the latest release from [Docker Flow Releases](https://github.com/vfarcic/docker-flow/releases) and rename it to docker-flow
+# Please download the latest release from [Docker Flow Releases](https://github.com/vfarcic/docker-flow/releases/latest) and rename it to docker-flow
+
+wget https://github.com/vfarcic/docker-flow/releases/latest/docker-flow_darwin_amd64 \
+    -o docker-flow
 
 # Explain docker-compose.yml
-
-# Enter Docker Toolbox CLI
 
 docker-machine create --driver virtualbox docker-flow
 
@@ -39,6 +45,28 @@ docker run -d \
 
 export CONSUL_IP=$(docker-machine ip docker-flow)
 
+curl $CONSUL_IP:8500/v1/status/leader
+```
+
+Deployment With Downtime
+------------------------
+
+```bash
+BOOKS_MS_VERSION=:1.0 docker-compose up -d app db
+
+export BOOKS_MS_VERSION=:latest
+
+docker-compose pull app
+
+docker-compose up -d app db
+
+docker-compose down
+```
+
+Blue-Green Deployment
+---------------------
+
+```bash
 ./docker-flow \
     --consul-address=http://$CONSUL_IP:8500 \
     --target=app \
@@ -59,37 +87,37 @@ docker ps -a
 # books-ms-db is running
 # booksms_app-blue_1 is stopped
 # booksms_app-green_1 is running
+```
 
-./docker-flow \
-    --consul-address=http://$CONSUL_IP:8500 \
-    --target=app \
-    --side-target=db \
-    --blue-green \
-    --scale=+5
+Relative Scaling
+----------------
+
+```bash
+./docker-flow --scale=2
+
+docker ps -a
+
+./docker-flow --scale=+4
 
 docker ps -a
 
 # books-ms-db is running
-# booksms_app-blue_[1-6] are running
-# booksms_app-green_1 is stopped
+# booksms_app-green_[1-6] are running
+# booksms_app-blue_[1-2] is stopped
 
-./docker-flow \
-    --consul-address=http://$CONSUL_IP:8500 \
-    --target=app \
-    --side-target=db \
-    --blue-green \
-    --scale=-3
+./docker-flow --scale=-3
 
-docker $(docker-machine config docker-flow) ps -a
+docker ps -a
 
 # books-ms-db is running
-# booksms_app-blue_[1-6] are stopped
-# booksms_app-green_[1-3] are running
+# booksms_app-green_[1-6] are stopped
+# booksms_app-blue_[1-3] are running
 ```
 
 TODO
 ====
 
+* Explain why previous color is stopped and not removed
 * Mention Swarm
 * Explain YAML
 * Explain Environment variables
@@ -99,3 +127,4 @@ TODO
 * Explain the order between YAML, env, and arguments
 * Create a release
 * Write an article
+* Switch from docker-compose stop/rm combination to down

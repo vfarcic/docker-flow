@@ -188,7 +188,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
 	expected := "tcp://5.5.5.5.:4444"
 	os.Setenv("DOCKER_HOST", expected)
 
-	fmt.Println(ProcessOpts(&s.opts))
+	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.Host)
 }
@@ -250,6 +250,24 @@ func (s OptsTestSuite) TestParseEnvVars_Slices() {
 	ParseEnvVars(&s.opts)
 	for _, d := range data {
 		s.Equal(strings.Split(d.expected, ","), *d.value)
+	}
+}
+
+func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
+	data := []struct{
+		expected	string
+		key 		string
+		value		*[]string
+	}{
+		{"", "FLOW_SIDE_TARGETS", &s.opts.SideTargets},
+	}
+	for _, d := range data {
+		s.opts.SideTargets = []string{}
+		os.Setenv(d.key, d.expected)
+	}
+	ParseEnvVars(&s.opts)
+	for _, d := range data {
+		s.Len(*d.value, 0)
 	}
 }
 

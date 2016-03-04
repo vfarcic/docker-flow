@@ -81,7 +81,10 @@ func ParseEnvVars(opts *Opts) error {
 	if err := envconfig.Process("flow", opts); err != nil {
 		return fmt.Errorf("Could not retrieve environment variables\n%v", err)
 	}
-	opts.SideTargets = strings.Split(os.Getenv("FLOW_SIDE_TARGETS"), ",")
+	sideTargets := os.Getenv("FLOW_SIDE_TARGETS")
+	if len(sideTargets) > 0 {
+		opts.SideTargets = strings.Split(sideTargets, ",")
+	}
 	return nil
 }
 
