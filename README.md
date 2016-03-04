@@ -15,15 +15,13 @@ The second feature I wanted to present is relative scaling. Docker Compose makes
 Running Docker Flow
 ===================
 
-**Docker Flow** requirements are [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/).
+**Docker Flow** requirements are [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/). The idea behind the project is not to substitute any Docker functionality but to provide additional features. It assumes that containers are defined in a docker-compose.yml file (path can be changed) and that Consul is used as service registry (soon to be extended to etcd and Zookeeper as well).
 
 The following examples will setup and environment with Docker Engine and Consul, and will assume that you already the [Docker Toolbox](https://www.docker.com/products/docker-toolbox) installed. Even though the examples will be run through the Docker Toolbox Terminal, feel free to apply them to your existing setup. You can run them on any of your Docker servers or, even better, inside a Docker Swarm cluster.
 
-Let's start.
+Let's start setting up the environment we'll use throughout this article. Please launch the *Docker Toolbox Terminal*, clone the project repository, and download the latest *Docker Flow* release.
 
 ```bash
-# Launch the Docker Toolbox Terminal
-
 git clone https://github.com/vfarcic/docker-flow
 
 cd docker-flow

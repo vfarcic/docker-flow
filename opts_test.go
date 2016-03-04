@@ -267,6 +267,7 @@ func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
 	}
 	ParseEnvVars(&s.opts)
 	for _, d := range data {
+
 		s.Len(*d.value, 0)
 	}
 }
