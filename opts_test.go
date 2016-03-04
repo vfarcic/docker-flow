@@ -255,19 +255,17 @@ func (s OptsTestSuite) TestParseEnvVars_Slices() {
 
 func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
 	data := []struct{
-		expected	string
 		key 		string
 		value		*[]string
 	}{
-		{"", "FLOW_SIDE_TARGETS", &s.opts.SideTargets},
+		{"FLOW_SIDE_TARGETS", &s.opts.SideTargets},
 	}
 	for _, d := range data {
 		s.opts.SideTargets = []string{}
-		os.Setenv(d.key, d.expected)
+		os.Unsetenv(d.key)
 	}
 	ParseEnvVars(&s.opts)
 	for _, d := range data {
-
 		s.Len(*d.value, 0)
 	}
 }
