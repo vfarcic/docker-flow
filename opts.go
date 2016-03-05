@@ -22,14 +22,14 @@ var processOpts = ProcessOpts
 type Opts struct {
 	Host        			string 		`short:"H" long:"host" description:"Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead."`
 	ComposePath 			string 		`short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file." yaml:"compose_path" envconfig:"compose_path"`
-	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Perform blue-green desployment." yaml:"blue_green" envconfig:"blue_green"`
+	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Perform blue-green deployment." yaml:"blue_green" envconfig:"blue_green"`
 	Target					string 		`short:"t" long:"target" description:"Docker Compose target."`
 	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
 	SkipPullTarget          bool		`short:"P" long:"skip-pull-targets" description:"Skip pulling targets." yaml:"skip_pull_target" envconfig:"skip_pull_target"`
 	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
-	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, current directory will be used instead."`
+	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
-	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If value starts with the plug sign (+), the number of instances will be increased by the given number. If value starts with the minus sign (-), the number of instances will be decreased by the given number."`
+	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number."`
 	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
 	ServiceDiscovery        ServiceDiscovery
 	ServiceName             string

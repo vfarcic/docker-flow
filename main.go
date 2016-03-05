@@ -57,10 +57,9 @@ func main() {
 				if !deployed {
 					target = opts.NextTarget
 					color = opts.NextColor
-				} else {
-					if err := dc.CreateFlowFile(opts.ComposePath, dockerComposeFlowPath, opts.Target, color, opts.BlueGreen); err != nil {
-						log.Fatal(err)
-					}
+				}
+				if err := dc.CreateFlowFile(opts.ComposePath, dockerComposeFlowPath, opts.Target, color, opts.BlueGreen); err != nil {
+					log.Fatal(err)
 				}
 				if err := dc.StopTargets(opts.Host, opts.Project, []string{target}); err != nil {
 					log.Fatal(err)
