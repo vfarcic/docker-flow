@@ -53,7 +53,8 @@ We'll use *docker-machine* to create a VM that will simulate our production envi
 
 ```bash
 docker-machine create \
-    --driver virtualbox docker-flow
+    -d virtualbox \
+    docker-flow
 
 eval "$(docker-machine env docker-flow)"
 ```
