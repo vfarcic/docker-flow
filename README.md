@@ -3,7 +3,7 @@ Docker Flow
 
 *Docker Flow* is a project aimed towards creating an easy to use continuous deployment flow. It uses [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/).
 
-For information regarding features and motivations behind this project, please read the [TODO](TODO) article.
+For information regarding features and motivations behind this project, please read the [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) article.
 
 The current list of features is as follows.
 
@@ -45,4 +45,4 @@ flow:
 Examples
 --------
 
-Examples can be found in the [TODO](TODO) article.
+Examples can be found in the [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) article.
