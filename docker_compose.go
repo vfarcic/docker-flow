@@ -8,7 +8,12 @@ import (
 
 const dockerComposeFlowPath  = "docker-compose-flow.yml.tmp"
 
-type DockerCompose interface {
+var dockerCompose DockerComposable = DockerCompose{}
+var getDockerCompose = func() DockerComposable {
+	return dockerCompose
+}
+
+type DockerComposable interface {
 	CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, project string, targets []string) error
@@ -18,9 +23,9 @@ type DockerCompose interface {
 	StopTargets(host, project string, targets []string) error
 }
 
-type DockerComposeImpl struct{}
+type DockerCompose struct{}
 
-func (dc DockerComposeImpl) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
+func (dc DockerCompose) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
 	data, err := readFile(dcPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)
@@ -38,14 +43,14 @@ func (dc DockerComposeImpl) CreateFlowFile(dcPath, dfPath, target, color string,
 	return nil
 }
 
-func (dc DockerComposeImpl) RemoveFlow() error {
+func (dc DockerCompose) RemoveFlow() error {
 	if err := removeFile(dockerComposeFlowPath); err != nil {
 		return fmt.Errorf("Could not remove the temp file %s\n%v", dockerComposeFlowPath, err)
 	}
 	return nil
 }
 
-func (dc DockerComposeImpl) PullTargets(host, project string, targets []string) error {
+func (dc DockerCompose) PullTargets(host, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
@@ -53,7 +58,7 @@ func (dc DockerComposeImpl) PullTargets(host, project string, targets []string) 
 	return dc.runCmd(host, project, args)
 }
 
-func (dc DockerComposeImpl) UpTargets(host, project string, targets []string) error {
+func (dc DockerCompose) UpTargets(host, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
@@ -61,7 +66,7 @@ func (dc DockerComposeImpl) UpTargets(host, project string, targets []string) er
 	return dc.runCmd(host, project, args)
 }
 
-func (dc DockerComposeImpl) ScaleTargets(host, project, target string, scale int) error {
+func (dc DockerCompose) ScaleTargets(host, project, target string, scale int) error {
 	if len(target) == 0 {
 		return nil
 	}
@@ -69,7 +74,7 @@ func (dc DockerComposeImpl) ScaleTargets(host, project, target string, scale int
 	return dc.runCmd(host, project, args)
 }
 
-func (dc DockerComposeImpl) RmTargets(host, project string, targets []string) error {
+func (dc DockerCompose) RmTargets(host, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
@@ -77,7 +82,7 @@ func (dc DockerComposeImpl) RmTargets(host, project string, targets []string) er
 	return dc.runCmd(host, project, args)
 }
 
-func (dc DockerComposeImpl) StopTargets(host, project string, targets []string) error {
+func (dc DockerCompose) StopTargets(host, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
@@ -85,20 +90,16 @@ func (dc DockerComposeImpl) StopTargets(host, project string, targets []string) 
 	return dc.runCmd(host, project, args)
 }
 
-func (dc DockerComposeImpl) getArgs(host, project string) []string {
+func (dc DockerCompose) getArgs(host, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
-	if (len(host) > 0) {
-		os.Setenv("DOCKER_HOST", host)
-	} else {
-		os.Unsetenv("DOCKER_HOST")
-	}
+	SetDockerHost(host)
 	if (len(project) > 0) {
 		args = append(args, "-p", project)
 	}
 	return args
 }
 
-func (dc DockerComposeImpl) runCmd(host, project string, args []string) error {
+func (dc DockerCompose) runCmd(host, project string, args []string) error {
 	args = append(dc.getArgs(host, project), args...)
 	cmd := execCmd("docker-compose", args...)
 	cmd.Stdout = os.Stdout

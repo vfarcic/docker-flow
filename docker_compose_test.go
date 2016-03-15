@@ -42,47 +42,47 @@ func (s *DockerComposeTestSuite) SetupTest() {
 
 // CreateFlow
 
-func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsNil() {
-	actual := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsNil() {
+	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Nil(actual)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsError_WhenReadFile() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenReadFile() {
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("Some error")
 	}
 
-	err := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlow_CreatesTheFile() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesTheFile() {
 	var actual string
 	writeFile = func(filename string, data []byte, perm os.FileMode) error {
 		actual = filename
 		return nil
 	}
 
-	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Equal(dockerComposeFlowPath, actual)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlow_CreatesDockerComposeReplica() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesDockerComposeReplica() {
 	var actual string
 	readFile = func(filename string) ([]byte, error) {
 		actual = filename
 		return []byte(""), nil
 	}
 
-	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Equal(s.dockerComposePath, actual)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlow_ReplacesTarget_WhenBlueGreen() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_ReplacesTarget_WhenBlueGreen() {
 	color := "orange"
 	target := "app"
 	var actual string
@@ -99,17 +99,17 @@ services:
 		return nil
 	}
 
-	DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, target, color, true)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, target, color, true)
 
 	s.Equal(expected, actual)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlow_ReturnsError_WhenWriteFile() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenWriteFile() {
 	writeFile = func(filename string, data []byte, perm os.FileMode) error {
 		return fmt.Errorf("Some error")
 	}
 
-	err := DockerComposeImpl{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -123,7 +123,7 @@ func (s DockerComposeTestSuite) Test_RemoveFlow_RemovesTheFile() {
 		return nil
 	}
 
-	DockerComposeImpl{}.RemoveFlow()
+	DockerCompose{}.RemoveFlow()
 
 	s.Equal(dockerComposeFlowPath, actual)
 }
@@ -133,7 +133,7 @@ func (s DockerComposeTestSuite) Test_RemoveFlow_ReturnsError() {
 		return fmt.Errorf("Some error")
 	}
 
-	err := DockerComposeImpl{}.RemoveFlow()
+	err := DockerCompose{}.RemoveFlow()
 
 	s.Error(err)
 }
@@ -141,27 +141,25 @@ func (s DockerComposeTestSuite) Test_RemoveFlow_ReturnsError() {
 // PullTargets
 
 func (s DockerComposeTestSuite) Test_PullTargets_ReturnsNil_WhenTargetsAreEmpty() {
-	actual := DockerComposeImpl{}.PullTargets(s.host, s.project, []string{})
+	actual := DockerCompose{}.PullTargets(s.host, s.project, []string{})
 
 	s.Nil(actual)
 }
 
-// PullTargets
-
 func (s DockerComposeTestSuite) Test_PullTargets() {
-	s.testCmd(DockerComposeImpl{}.PullTargets, "pull", s.target)
+	s.testCmd(DockerCompose{}.PullTargets, "pull", s.target)
 }
 
 // UpTargets
 
 func (s DockerComposeTestSuite) Test_UpTargets() {
-	s.testCmd(DockerComposeImpl{}.UpTargets, "up", "-d", s.target)
+	s.testCmd(DockerCompose{}.UpTargets, "up", "-d", s.target)
 }
 
 // ScaleTargets
 
 func (s DockerComposeTestSuite) Test_ScaleTargets_ReturnsNil_WhenTargetIsEmpty() {
-	actual := DockerComposeImpl{}.ScaleTargets(s.host, s.project, "", 8)
+	actual := DockerCompose{}.ScaleTargets(s.host, s.project, "", 8)
 
 	s.Nil(actual)
 }
@@ -171,7 +169,7 @@ func (s DockerComposeTestSuite) Test_ScaleTargets_CreatesTheCommand() {
 	expected := []string{"docker-compose", "-f", dockerComposeFlowPath, "-p", s.project, "scale", fmt.Sprintf("%s=%d", s.target, scale)}
 	actual := s.mockExecCmd()
 
-	DockerComposeImpl{}.ScaleTargets(s.host, s.project, s.target, scale)
+	DockerCompose{}.ScaleTargets(s.host, s.project, s.target, scale)
 
 	s.Equal(expected, *actual)
 }
@@ -179,13 +177,13 @@ func (s DockerComposeTestSuite) Test_ScaleTargets_CreatesTheCommand() {
 // RmTargets
 
 func (s DockerComposeTestSuite) Test_RmTargets() {
-	s.testCmd(DockerComposeImpl{}.RmTargets, "rm", "-f", s.target)
+	s.testCmd(DockerCompose{}.RmTargets, "rm", "-f", s.target)
 }
 
 // StopTargets
 
 func (s DockerComposeTestSuite) Test_StopTargets() {
-	s.testCmd(DockerComposeImpl{}.StopTargets, "stop", s.target)
+	s.testCmd(DockerCompose{}.StopTargets, "stop", s.target)
 }
 
 // Suite
@@ -221,7 +219,6 @@ func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
 	f(s.host, s.project, []string{s.target})
 	s.Equal(expected, *actual)
 
-
 	// Does not add project when empty
 	expected = append([]string{"docker-compose", "-f", dockerComposeFlowPath}, args...)
 	actual = s.mockExecCmd()
@@ -245,7 +242,8 @@ type DockerComposeMock struct{
 }
 
 func (m *DockerComposeMock) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
-	return nil
+	args := m.Called(dcPath, dfPath, target, color, blueGreen)
+	return args.Error(0)
 }
 
 func (m *DockerComposeMock) RemoveFlow() error {
@@ -273,13 +271,14 @@ func (m *DockerComposeMock) RmTargets(host, project string, targets []string) er
 }
 
 func (m *DockerComposeMock) StopTargets(host, project string, targets []string) error {
-	return nil
+	args := m.Called(host, project, targets)
+	return args.Error(0)
 }
 
 func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 	mockObj := new(DockerComposeMock)
 	if skipMethod != "PullTargets" {
-		mockObj.On("PullTargets", opts.Host, opts.Project, FlowImpl{}.GetTargets(opts)).Return(nil)
+		mockObj.On("PullTargets", opts.Host, opts.Project, Flow{}.GetTargets(opts)).Return(nil)
 	}
 	if skipMethod != "UpTargets" {
 		mockObj.On("UpTargets", opts.Host, opts.Project, opts.SideTargets).Return(nil)
@@ -289,6 +288,12 @@ func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 	}
 	if skipMethod != "ScaleTargets" {
 		mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	}
+	if skipMethod != "CreateFlowFile" {
+		mockObj.On("CreateFlowFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	}
+	if skipMethod != "StopTargets" {
+		mockObj.On("StopTargets", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	return mockObj
 }

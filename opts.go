@@ -29,9 +29,9 @@ type Opts struct {
 	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
-	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number."`
+	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number." yaml:"scale" envconfig:"scale"`
 	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
-	ServiceDiscovery        ServiceDiscovery
+	ProxyHost        		string 		`short:"r" long:"proxy-host" description:"Docker daemon socket of the proxy host." yaml:"proxy_host" envconfig:"proxy_host"`
 	ServiceName             string
 	CurrentColor    		string
 	NextColor       		string
@@ -39,7 +39,7 @@ type Opts struct {
 	NextTarget      		string
 }
 
-func GetOpts() (Opts, error) {
+var GetOpts = func() (Opts, error) {
 	opts := Opts{
 		ComposePath: dockerComposePath,
 		Flow: []string{"deploy"},
@@ -99,9 +99,7 @@ func ParseEnvVars(opts *Opts) error {
 }
 
 func ProcessOpts(opts *Opts) (err error) {
-	if opts.ServiceDiscovery == nil {
-		opts.ServiceDiscovery = Consul{}
-	}
+	sc := getServiceDiscovery()
 	if len(opts.Project) == 0 {
 		dir, _ := getWd()
 		opts.Project = dir[strings.LastIndex(dir, "/") + 1:]
@@ -123,13 +121,13 @@ func ProcessOpts(opts *Opts) (err error) {
 	if len(opts.ServiceName) == 0 {
 		opts.ServiceName = fmt.Sprintf("%s-%s", opts.Project, opts.Target)
 	}
-	if opts.CurrentColor, err = opts.ServiceDiscovery.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName); err != nil {
+	if opts.CurrentColor, err = sc.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName); err != nil {
 		return err
 	}
 	if len(opts.Host) == 0 {
 		opts.Host = os.Getenv("DOCKER_HOST")
 	}
-	opts.NextColor = opts.ServiceDiscovery.GetNextColor(opts.CurrentColor)
+	opts.NextColor = sc.GetNextColor(opts.CurrentColor)
 	if opts.BlueGreen {
 		opts.NextTarget = fmt.Sprintf("%s-%s", opts.Target, opts.NextColor)
 		opts.CurrentTarget = fmt.Sprintf("%s-%s", opts.Target, opts.CurrentColor)

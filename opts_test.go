@@ -26,7 +26,7 @@ func (s *OptsTestSuite) SetupTest() {
 		ServiceName: "myFancyService",
 		CurrentColor: "orange",
 	}
-	s.opts.ServiceDiscovery = getServiceDiscoveryMock(s.opts, "")
+	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	path := fmt.Sprintf("/some/path/%s", s.dir)
 	getWd = func() (string, error) {
 		return path, nil
@@ -42,28 +42,13 @@ func TestOptsTestSuite(t *testing.T) {
 
 // processOpts
 
-func (s OptsTestSuite) TestProcessOpts_ReturnsNil() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsNil() {
 	actual := ProcessOpts(&s.opts)
 
 	s.Nil(actual)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsServiceDiscoveryToConsul() {
-	s.opts.Target = "" // So that it fails instead of running the whole method
-	s.opts.ServiceDiscovery = nil
-
-	ProcessOpts(&s.opts)
-
-	s.IsType(Consul{}, s.opts.ServiceDiscovery)
-}
-
-func (s OptsTestSuite) TestProcessOpts_DoesNotSetServiceDiscoveryToConsul_WhenNotEmpty() {
-	ProcessOpts(&s.opts)
-
-	s.IsType(getServiceDiscoveryMock(s.opts, ""), s.opts.ServiceDiscovery)
-}
-
-func (s OptsTestSuite) TestProcessOpts_SetsProjectToCurrentDir() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsProjectToCurrentDir() {
 	s.opts.Project = ""
 
 	ProcessOpts(&s.opts)
@@ -71,7 +56,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsProjectToCurrentDir() {
 	s.Equal(s.dir, s.opts.Project)
 }
 
-func (s OptsTestSuite) TestProcessOpts_DoesNotSetProjectToCurrentDir_WhenProjectIsNotEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_DoesNotSetProjectToCurrentDir_WhenProjectIsNotEmpty() {
 	expected := s.opts.Project
 
 	ProcessOpts(&s.opts)
@@ -79,7 +64,7 @@ func (s OptsTestSuite) TestProcessOpts_DoesNotSetProjectToCurrentDir_WhenProject
 	s.Equal(expected, s.opts.Project)
 }
 
-func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenTargetIsEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenTargetIsEmpty() {
 	s.opts.Target = ""
 
 	actual := ProcessOpts(&s.opts)
@@ -87,7 +72,7 @@ func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenTargetIsEmpty() {
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenServiceDiscoveryAddressIsEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenServiceDiscoveryAddressIsEmpty() {
 	s.opts.ServiceDiscoveryAddress = ""
 
 	actual := ProcessOpts(&s.opts)
@@ -95,7 +80,7 @@ func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenServiceDiscoveryAddressI
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenScaleIsNotNumber() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenScaleIsNotNumber() {
 	s.opts.Scale = "This Is Not A Number"
 
 	actual := ProcessOpts(&s.opts)
@@ -103,11 +88,11 @@ func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenScaleIsNotNumber() {
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsServiceNameToProjectAndTarget() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsServiceNameToProjectAndTarget() {
 	expected := fmt.Sprintf("%s-%s", s.opts.Project, s.opts.Target)
 	mockObj := getServiceDiscoveryMock(s.opts, "GetColor")
 	mockObj.On("GetColor", mock.Anything, mock.Anything).Return("orange", fmt.Errorf("This is an error"))
-	s.opts.ServiceDiscovery = mockObj
+	serviceDiscovery = mockObj
 	s.opts.ServiceName = ""
 
 	ProcessOpts(&s.opts)
@@ -115,7 +100,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsServiceNameToProjectAndTarget() {
 	s.Equal(expected, s.opts.ServiceName)
 }
 
-func (s OptsTestSuite) TestProcessOpts_DoesNotSetServiceNameWhenNotEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_DoesNotSetServiceNameWhenNotEmpty() {
 	expected := s.opts.ServiceName
 
 	ProcessOpts(&s.opts)
@@ -123,33 +108,33 @@ func (s OptsTestSuite) TestProcessOpts_DoesNotSetServiceNameWhenNotEmpty() {
 	s.Equal(expected, s.opts.ServiceName)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsCurrentColorFromServiceDiscovery() {
-	expected, _ := s.opts.ServiceDiscovery.GetColor(s.opts.ServiceDiscoveryAddress, s.opts.ServiceName)
+func (s OptsTestSuite) Test_ProcessOpts_SetsCurrentColorFromServiceDiscovery() {
+	expected, _ := serviceDiscovery.GetColor(s.opts.ServiceDiscoveryAddress, s.opts.ServiceName)
 
 	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.CurrentColor)
 }
 
-func (s OptsTestSuite) TestProcessOpts_ReturnsError_WhenGetColorFails() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenGetColorFails() {
 	mockObj := getServiceDiscoveryMock(s.opts, "GetColor")
 	mockObj.On("GetColor", mock.Anything, mock.Anything).Return("orange", fmt.Errorf("This is an error"))
-	s.opts.ServiceDiscovery = mockObj
+	serviceDiscovery = mockObj
 
 	actual := ProcessOpts(&s.opts)
 
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsNextColorFromServiceDiscovery() {
-	expected := s.opts.ServiceDiscovery.GetNextColor(s.opts.CurrentColor)
+func (s OptsTestSuite) Test_ProcessOpts_SetsNextColorFromServiceDiscovery() {
+	expected := serviceDiscovery.GetNextColor(s.opts.CurrentColor)
 
 	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.NextColor)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsNextTargetToTarget() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsNextTargetToTarget() {
 	expected := s.opts.Target
 
 	ProcessOpts(&s.opts)
@@ -157,7 +142,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsNextTargetToTarget() {
 	s.Equal(expected, s.opts.NextTarget)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsCurrentTargetToTarget() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsCurrentTargetToTarget() {
 	expected := s.opts.Target
 
 	ProcessOpts(&s.opts)
@@ -165,16 +150,16 @@ func (s OptsTestSuite) TestProcessOpts_SetsCurrentTargetToTarget() {
 	s.Equal(expected, s.opts.CurrentTarget)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsNextTargetToTargetAndNextColor_WhenBlueGreen() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsNextTargetToTargetAndNextColor_WhenBlueGreen() {
 	s.opts.BlueGreen = true
-	expected := fmt.Sprintf("%s-%s", s.opts.Target, s.opts.ServiceDiscovery.GetNextColor(s.opts.CurrentColor))
+	expected := fmt.Sprintf("%s-%s", s.opts.Target, serviceDiscovery.GetNextColor(s.opts.CurrentColor))
 
 	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.NextTarget)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsCurrentTargetToTargetAndCurrentColor_WhenBlueGreen() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsCurrentTargetToTargetAndCurrentColor_WhenBlueGreen() {
 	s.opts.BlueGreen = true
 	expected := fmt.Sprintf("%s-%s", s.opts.Target, s.opts.CurrentColor)
 
@@ -183,7 +168,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsCurrentTargetToTargetAndCurrentColor_
 	s.Equal(expected, s.opts.CurrentTarget)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
 	s.opts.Host = ""
 	expected := "tcp://5.5.5.5.:4444"
 	os.Setenv("DOCKER_HOST", expected)
@@ -193,7 +178,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
 	s.Equal(expected, s.opts.Host)
 }
 
-func (s OptsTestSuite) TestProcessOpts_SetsFlowToDeploy_WhenEmpty() {
+func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 	expected := []string{"deploy"}
 	s.opts.Flow = []string{}
 	ProcessOpts(&s.opts)
@@ -202,7 +187,7 @@ func (s OptsTestSuite) TestProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 
 // ParseEnvVars
 
-func (s OptsTestSuite) TestParseEnvVars_Strings() {
+func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 	data := []struct{
 		expected	string
 		key 		string
@@ -214,6 +199,7 @@ func (s OptsTestSuite) TestParseEnvVars_Strings() {
 		{"myProject", 			"FLOW_PROJECT", 		&s.opts.Project},
 		{"mySDAddress", 		"FLOW_CONSUL_ADDRESS", 	&s.opts.ServiceDiscoveryAddress},
 		{"myScale", 			"FLOW_SCALE", 			&s.opts.Scale},
+		{"myProxyHost", 		"FLOW_PROXY_HOST", 		&s.opts.ProxyHost},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -224,7 +210,7 @@ func (s OptsTestSuite) TestParseEnvVars_Strings() {
 	}
 }
 
-func (s OptsTestSuite) TestParseEnvVars_Bools() {
+func (s OptsTestSuite) Test_ParseEnvVars_Bools() {
 	data := []struct{
 		key 		string
 		value		*bool
@@ -242,7 +228,7 @@ func (s OptsTestSuite) TestParseEnvVars_Bools() {
 	}
 }
 
-func (s OptsTestSuite) TestParseEnvVars_Slices() {
+func (s OptsTestSuite) Test_ParseEnvVars_Slices() {
 	data := []struct{
 		expected	string
 		key 		string
@@ -260,7 +246,7 @@ func (s OptsTestSuite) TestParseEnvVars_Slices() {
 	}
 }
 
-func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
+func (s OptsTestSuite) Test_ParseEnvVars_DoesNotParseSlices_WhenEmpty() {
 	data := []struct{
 		key 		string
 		value		*[]string
@@ -277,7 +263,7 @@ func (s OptsTestSuite) TestParseEnvVars_DoesNotParseSlices_WhenEmpty() {
 	}
 }
 
-func (s OptsTestSuite) TestParseEnvVars_ReturnsError_WhenFailure() {
+func (s OptsTestSuite) Test_ParseEnvVars_ReturnsError_WhenFailure() {
 	os.Setenv("FLOW_BLUE_GREEN", "This is not a bool")
 
 	actual := ParseEnvVars(&s.opts)
@@ -287,14 +273,6 @@ func (s OptsTestSuite) TestParseEnvVars_ReturnsError_WhenFailure() {
 }
 
 // ParseArgs
-
-func (s OptsTestSuite) TestParseArgs_ReturnsError_WhenFailure() {
-	os.Args = []string{"myProgram", "--this-flag-does-not-exist=something"}
-
-	actual := ParseArgs(&s.opts)
-
-	s.Error(actual)
-}
 
 func (s OptsTestSuite) TestParseArgs_LongStrings() {
 	data := []struct{
@@ -308,6 +286,7 @@ func (s OptsTestSuite) TestParseArgs_LongStrings() {
 		{"projectFromArgs", "project", &s.opts.Project},
 		{"addressFromArgs", "consul-address", &s.opts.ServiceDiscoveryAddress},
 		{"scaleFromArgs", "scale", &s.opts.Scale},
+		{"proxyHostFromArgs", "proxy-host", &s.opts.ProxyHost},
 	}
 
 	for _, d := range data {
@@ -329,6 +308,7 @@ func (s OptsTestSuite) TestParseArgs_ShortStrings() {
 		{"projectFromArgs", "p", &s.opts.Project},
 		{"addressFromArgs", "c", &s.opts.ServiceDiscoveryAddress},
 		{"scaleFromArgs", "s", &s.opts.Scale},
+		{"proxyHostFromArgs", "r", &s.opts.ProxyHost},
 	}
 
 	for _, d := range data {
@@ -412,15 +392,23 @@ func (s OptsTestSuite) TestParseArgs_ShortSlices() {
 	}
 }
 
+func (s OptsTestSuite) TestParseArgs_ReturnsError_WhenFailure() {
+	os.Args = []string{"myProgram", "--this-flag-does-not-exist=something"}
+
+	actual := ParseArgs(&s.opts)
+
+	s.Error(actual)
+}
+
 // ParseYml
 
-func (s OptsTestSuite) TestParseYml_ReturnsNil() {
+func (s OptsTestSuite) Test_ParseYml_ReturnsNil() {
 	actual := ParseYml(&s.opts)
 
 	s.Nil(actual)
 }
 
-func (s OptsTestSuite) TestParseYml_ReturnsError_WhenReadFileFails() {
+func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenReadFileFails() {
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
@@ -430,7 +418,7 @@ func (s OptsTestSuite) TestParseYml_ReturnsError_WhenReadFileFails() {
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestParseYml_ReturnsError_WhenUnmarshalFails() {
+func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenUnmarshalFails() {
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte("This is not a proper YML"), nil
 	}
@@ -440,7 +428,7 @@ func (s OptsTestSuite) TestParseYml_ReturnsError_WhenUnmarshalFails() {
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) TestParseYml_SetsOpts() {
+func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	host := "hostFromYml"
 	composePath := "composePathFromYml"
 	target := "targetFromYml"
@@ -451,6 +439,7 @@ func (s OptsTestSuite) TestParseYml_SetsOpts() {
 	scale := "scaleFromYml"
 	flow1 := "deploy"
 	flow2 := "stop-old"
+	proxyHost := "proxyHostFromYml"
 	yml := fmt.Sprintf(`
 host: %s
 compose_path: %s
@@ -464,10 +453,11 @@ pull_side_targets: true
 project: %s
 consul_address: %s
 scale: %s
+proxy_host: %s
 flow:
   - %s
   - %s
-`, host, composePath, target, sideTarget1, sideTarget2, project, consulAddress, scale, flow1, flow2)
+`, host, composePath, target, sideTarget1, sideTarget2, project, consulAddress, scale, proxyHost, flow1, flow2)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
 	}
@@ -484,6 +474,7 @@ flow:
 	s.Equal(project, s.opts.Project)
 	s.Equal(consulAddress, s.opts.ServiceDiscoveryAddress)
 	s.Equal(scale, s.opts.Scale)
+	s.Equal(proxyHost, s.opts.ProxyHost)
 	s.Equal([]string{flow1, flow2}, s.opts.Flow)
 }
 
@@ -511,7 +502,7 @@ func (s OptsTestSuite) TestGetOpts_InvokesParseYml() {
 	s.True(called)
 }
 
-func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseYmlFails() {
+func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseYmlFails() {
 	restore := parseYml
 	processOpts = func (*Opts) error {
 		return nil
@@ -526,7 +517,7 @@ func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseYmlFails() {
 	parseYml = restore
 }
 
-func (s OptsTestSuite) TestGetOpts_InvokesParseEnvVars() {
+func (s OptsTestSuite) Test_GetOpts_InvokesParseEnvVars() {
 	called := false
 	processOpts = func (*Opts) error {
 		return nil
@@ -542,7 +533,7 @@ func (s OptsTestSuite) TestGetOpts_InvokesParseEnvVars() {
 	s.True(called)
 }
 
-func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseEnvVarsFails() {
+func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseEnvVarsFails() {
 	restore := parseEnvVars
 	processOpts = func (*Opts) error {
 		return nil
@@ -557,7 +548,7 @@ func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseEnvVarsFails() {
 	parseEnvVars = restore
 }
 
-func (s OptsTestSuite) TestGetOpts_InvokesParseArgs() {
+func (s OptsTestSuite) Test_GetOpts_InvokesParseArgs() {
 	called := false
 	processOpts = func (*Opts) error {
 		return nil
@@ -573,7 +564,7 @@ func (s OptsTestSuite) TestGetOpts_InvokesParseArgs() {
 	s.True(called)
 }
 
-func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseArgsFails() {
+func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseArgsFails() {
 	restore := parseArgs
 	processOpts = func (*Opts) error {
 		return nil
@@ -588,7 +579,7 @@ func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenParseArgsFails() {
 	parseArgs = restore
 }
 
-func (s OptsTestSuite) TestGetOpts_InvokesProcessOpts() {
+func (s OptsTestSuite) Test_GetOpts_InvokesProcessOpts() {
 	called := false
 	processOpts = func (*Opts) error {
 		called = true
@@ -601,7 +592,7 @@ func (s OptsTestSuite) TestGetOpts_InvokesProcessOpts() {
 	s.True(called)
 }
 
-func (s OptsTestSuite) TestGetOpts_ReturnsError_WhenProcessOptsFails() {
+func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenProcessOptsFails() {
 	restore := processOpts
 	processOpts = func (*Opts) error {
 		return fmt.Errorf("This is an error from ProcessOpts")

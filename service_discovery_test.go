@@ -50,5 +50,8 @@ func getServiceDiscoveryMock(opts Opts, skipMethod string) *ServiceDiscoveryMock
 	if (skipMethod != "GetNextColor") {
 		mockObj.On("GetNextColor", opts.CurrentColor).Return("pink")
 	}
+	if (skipMethod != "PutColor") {
+		mockObj.On("PutColor", mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+	}
 	return mockObj
 }

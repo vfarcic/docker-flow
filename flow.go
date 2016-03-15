@@ -4,15 +4,22 @@ import (
 	"fmt"
 )
 
-type Flow interface {
-	Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error
+type Flowable interface {
+	Deploy(opts Opts, dc DockerComposable) error
 	GetTargets(opts Opts) []string
+	Scale(opts Opts, dc DockerComposable, target string) error
+	Proxy(opts Opts, proxy Proxy) error
 }
 
-type FlowImpl struct{}
+type Flow struct{}
 
-func (flow FlowImpl) Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) error {
-	targets := flow.GetTargets(opts)
+var flow Flowable = Flow{}
+func getFlow() Flowable {
+	return flow
+}
+
+func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
+	targets := m.GetTargets(opts)
 	if err := dc.PullTargets(opts.Host, opts.Project, targets); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
@@ -24,13 +31,14 @@ func (flow FlowImpl) Deploy(opts Opts, sc ServiceDiscovery, dc DockerCompose) er
 			return fmt.Errorf("The deployment phase failed\n%v", err)
 		}
 	}
-	if err := flow.Scale(opts, sc, dc, opts.NextTarget); err != nil {
+	if err := m.Scale(opts, dc, opts.NextTarget); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (flow FlowImpl) Scale(opts Opts, sc ServiceDiscovery, dc DockerCompose, target string) error {
+func (m Flow) Scale(opts Opts, dc DockerComposable, target string) error {
+	sc := getServiceDiscovery()
 	scale, err := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
 	if err != nil {
 		return err
@@ -42,7 +50,11 @@ func (flow FlowImpl) Scale(opts Opts, sc ServiceDiscovery, dc DockerCompose, tar
 	return nil
 }
 
-func (flow FlowImpl) GetTargets(opts Opts) []string {
+func (m Flow) Proxy(opts Opts, proxy Proxy) error {
+	return proxy.Provision(opts.ProxyHost, opts.ServiceDiscoveryAddress)
+}
+
+func (m Flow) GetTargets(opts Opts) []string {
 	targets := make([]string, 0);
 	if !opts.SkipPullTarget {
 		targets = append(targets, opts.NextTarget)
