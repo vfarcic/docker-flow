@@ -247,7 +247,8 @@ func (m *DockerComposeMock) CreateFlowFile(dcPath, dfPath, target, color string,
 }
 
 func (m *DockerComposeMock) RemoveFlow() error {
-	return nil
+	args := m.Called()
+	return args.Error(0)
 }
 
 func (m *DockerComposeMock) PullTargets(host, project string, targets []string) error {
@@ -294,6 +295,9 @@ func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 	}
 	if skipMethod != "StopTargets" {
 		mockObj.On("StopTargets", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	}
+	if skipMethod != "RemoveFlow" {
+		mockObj.On("RemoveFlow").Return(nil)
 	}
 	return mockObj
 }

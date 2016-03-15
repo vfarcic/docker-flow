@@ -19,6 +19,16 @@ func getFlow() Flowable {
 }
 
 func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
+	if err := dc.CreateFlowFile(
+		opts.ComposePath,
+		dockerComposeFlowPath,
+		opts.Target,
+		opts.NextColor,
+		opts.BlueGreen,
+	); err != nil {
+		return fmt.Errorf("Creationg of the Docker Flow file failed\n%v", err)
+	}
+
 	targets := m.GetTargets(opts)
 	if err := dc.PullTargets(opts.Host, opts.Project, targets); err != nil {
 		return fmt.Errorf("The deployment phase failed\n%v", err)

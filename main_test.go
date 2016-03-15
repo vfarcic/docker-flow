@@ -57,44 +57,6 @@ func (s MainTestSuite) Test_Main_Exits_WhenGetOptsFails() {
 
 // main > deploy
 
-func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFile_WhenDeploy() {
-	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
-
-	main()
-
-	mockObj.AssertCalled(
-		s.T(),
-		"CreateFlowFile",
-		s.opts.ComposePath,
-		dockerComposeFlowPath,
-		s.opts.Target,
-		s.opts.NextColor,
-		s.opts.BlueGreen,
-	)
-}
-
-func (s MainTestSuite) Test_Main_LogsError_WhenDeployAndDockerComposeCreateFlowFileFails() {
-	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
-	mockObj.On(
-		"CreateFlowFile",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(fmt.Errorf("This is an error"))
-	dockerCompose = mockObj
-	actual := false
-	logFatal = func(v ...interface{}) {
-		actual = true
-	}
-
-	main()
-
-	s.True(actual)
-}
-
 func (s MainTestSuite) Test_Main_InvokesFlowDeploy_WhenDeploy() {
 	mockObj := getFlowMock("")
 	flow = mockObj
@@ -217,6 +179,12 @@ func (s MainTestSuite) Test_Main_LogsFatal_WhenScaleAndCreateFlowFileFails() {
 		mock.Anything,
 	).Return(fmt.Errorf("This is an error"))
 	dockerCompose = mockObj
+	GetOpts = func() (Opts, error) {
+		s.opts.Flow = []string{"scale"}
+		s.opts.BlueGreen = false
+		return s.opts, nil
+	}
+	deployed = false
 	actual := false
 	logFatal = func(v ...interface{}) {
 		actual = true
@@ -419,6 +387,31 @@ func (s MainTestSuite) Test_Main_DoesNotRunStopOld_WhenStopOldAndNotBlueGreen() 
 		mock.Anything,
 		mock.Anything,
 	)
+}
+
+// main > cleanup
+
+func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow() {
+	mockObj := getDockerComposeMock(s.opts, "")
+	dockerCompose = mockObj
+
+	main()
+
+	mockObj.AssertCalled(s.T(), "RemoveFlow")
+}
+
+func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenDockerComposeRemoveFlowFails() {
+	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
+	mockObj.On("RemoveFlow").Return(fmt.Errorf("This is an error"))
+	dockerCompose = mockObj
+	actual := false
+	logFatal = func(v ...interface{}) {
+		actual = true
+	}
+
+	main()
+
+	s.True(actual)
 }
 
 // Suite

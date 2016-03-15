@@ -5,7 +5,40 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"fmt"
+	"github.com/stretchr/testify/suite"
 )
+
+type FlowTestSuite struct {
+	suite.Suite
+	opts		Opts
+	dc			DockerComposable
+}
+
+func (s *FlowTestSuite) SetupTest() {
+	s.opts = Opts{
+		ComposePath: "myComposePath",
+		Target: "myTarget",
+		NextColor: "orange",
+		CurrentColor: "pink",
+		NextTarget: "myNextTarget",
+		CurrentTarget: "myCurrentTarget",
+		BlueGreen: true,
+		Flow: []string{"deploy", "scale"},
+		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
+		ServiceName: "myServiceName",
+	}
+	GetOptsOrig := GetOpts
+	defer func() {
+		GetOpts = GetOptsOrig
+	}()
+	GetOpts = func() (Opts, error) {
+		return s.opts, nil
+	}
+	s.dc = getDockerComposeMock(s.opts, "")
+	dockerCompose = s.dc
+	flow = getFlowMock("")
+	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
+}
 
 // Deploy
 
@@ -17,6 +50,42 @@ func Test_DeployReturnsNil(t *testing.T) {
 	actual := Flow{}.Deploy(opts, mockObj)
 
 	assert.Nil(t, actual)
+}
+
+// Deploy > CreateFlowFile
+
+func (s FlowTestSuite) Test_Deploy_InvokesDockerComposeCreateFlowFile_WhenDeploy() {
+	mockObj := getDockerComposeMock(s.opts, "")
+	s.dc = mockObj
+
+	Flow{}.Deploy(s.opts, s.dc)
+
+	mockObj.AssertCalled(
+		s.T(),
+		"CreateFlowFile",
+		s.opts.ComposePath,
+		dockerComposeFlowPath,
+		s.opts.Target,
+		s.opts.NextColor,
+		s.opts.BlueGreen,
+	)
+}
+
+func (s MainTestSuite) Test_Deploy_ReturnsError_WhenDeployAndDockerComposeCreateFlowFileFails() {
+	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
+	mockObj.On(
+		"CreateFlowFile",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
+	s.dc = mockObj
+
+	err := Flow{}.Deploy(s.opts, s.dc)
+
+	s.Error(err)
 }
 
 // Deploy > PullTargets
@@ -307,6 +376,12 @@ func Test_Proxy_ReturnsError_WhenFailure(t *testing.T) {
 	actual := Flow{}.Proxy(opts, mockObj)
 
 	assert.Error(t, actual)
+}
+
+// Suite
+
+func TestFlowTestSuite(t *testing.T) {
+	suite.Run(t, new(FlowTestSuite))
 }
 
 // Mock

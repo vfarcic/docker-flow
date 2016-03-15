@@ -31,15 +31,6 @@ func main() {
 		switch strings.ToLower(step) {
 		case "deploy":
 			logPrintln("Deploying...")
-			if err := dc.CreateFlowFile(
-				opts.ComposePath,
-				dockerComposeFlowPath,
-				opts.Target,
-				opts.NextColor,
-				opts.BlueGreen,
-			); err != nil {
-				logFatal(err)
-			}
 			if err := flow.Deploy(opts, dc); err != nil {
 				logFatal(err)
 			}
@@ -57,6 +48,7 @@ func main() {
 		case "scale":
 			if !deployed {
 				logPrintln("Scaling...")
+				// TODO: Move to flow
 				if err := dc.CreateFlowFile(
 					opts.ComposePath,
 					dockerComposeFlowPath,
@@ -64,8 +56,9 @@ func main() {
 					opts.CurrentColor,
 					opts.BlueGreen,
 				); err != nil {
-					log.Fatal(err)
+					logFatal(err)
 				}
+				// TODO: End Move to flow
 				if err := flow.Scale(opts, dc, opts.CurrentTarget); err != nil {
 					logFatal(err)
 				}
@@ -90,8 +83,8 @@ func main() {
 			// TODO: End Move to flow
 		}
 	}
-//
-//	if err := dc.RemoveFlow(); err != nil {
-//		log.Fatal(err)
-//	}
+	// cleanup
+	if err := dc.RemoveFlow(); err != nil {
+		logFatal(err)
+	}
 }
