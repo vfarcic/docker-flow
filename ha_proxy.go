@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"bytes"
 	"strings"
+	"net/http"
 )
 
 const containerStatusRunning = 1
 const containerStatusExited = 2
 const containerStatusRemoved = 3
+const ProxyReconfigureDefaultPort = 8080
 
 var haProxy Proxy = HaProxy{}
 type HaProxy struct {}
@@ -18,12 +20,16 @@ type HaProxy struct {}
 var runHaProxyRunCmd = runCmd
 var runHaProxyPsCmd = runCmd
 var runHaProxyStartCmd = runCmd
+var httpGet = http.Get
 
-func (m HaProxy) Provision(host, scAddress string) error {
+func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
 	if len(host) == 0 {
-		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
+		return fmt.Errorf("Proxy docker host is mandatory for the proxy step. Please set the proxy-docker-host argument.")
 	}
-	SetDockerHost(host)
+	if len(scAddress) == 0 {
+		return fmt.Errorf("Service Discovery Address is mandatory.")
+	}
+	SetDockerHost(host, certPath)
 	status, err := m.ps()
 	if err != nil {
 		return err
@@ -36,20 +42,55 @@ func (m HaProxy) Provision(host, scAddress string) error {
 			return err
 		}
 	default:
-		if err := m.run(scAddress); err != nil {
+		if err := m.run(reconfPort, scAddress); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (m HaProxy) run(scAddress string) error {
+func (m HaProxy) Reconfigure(domain, reconfPort, project, servicePath string) error {
+	if len(domain) == 0 {
+		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
+	}
+	if len(project) == 0 {
+		return fmt.Errorf("Project is mandatory for the proxy step.")
+	}
+	if len(servicePath) == 0 {
+		return fmt.Errorf("Service path is mandatory.")
+	}
+	if len(reconfPort) == 0 {
+		return fmt.Errorf("Reconfigure port is mandatory.")
+	}
+	var address string
+	if strings.Contains(domain, ":") { // For testing purposes only
+		address = domain
+	} else {
+		address = fmt.Sprintf("%s:%s", domain, reconfPort)
+	}
+	resp, err := httpGet(fmt.Sprintf(
+		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
+		address,
+		project,
+		servicePath,
+	))
+	if err != nil {
+		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
+	}
+	return nil
+}
+
+func (m HaProxy) run(reconfPort, scAddress string) error {
 	logPrintln("Running the docker-flow-proxy container...")
 	args := []string{
 		"run", "-d",
 		"--name", "docker-flow-proxy",
 		"-e", fmt.Sprintf("%s=%s", "CONSUL_ADDRESS", scAddress),
-		"-p", "80:80",
+		"-p", "80:80", "-p", fmt.Sprintf("%s:8080", reconfPort),
 		"vfarcic/docker-flow-proxy",
 	}
 	cmd := exec.Command("docker", args...)

@@ -50,16 +50,16 @@ func (suite *ConsulTestSuite) SetupTest() {
 	}))
 }
 
-func (suite ConsulTestSuite) Test_GetScaleCalc_Returns1() {
-	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, "SERVICE_NEVER_DEPLOYED_BEFORE", "")
+func (s ConsulTestSuite) Test_GetScaleCalc_Returns1() {
+	actual, _ := Consul{}.GetScaleCalc(s.Server.URL, "SERVICE_NEVER_DEPLOYED_BEFORE", "")
 
-	suite.Equal(1, actual)
+	s.Equal(1, actual)
 }
 
-func (suite ConsulTestSuite) Test_GetScaleCalc_ReturnsNumberFromConsul() {
-	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, "")
+func (s ConsulTestSuite) Test_GetScaleCalc_ReturnsNumberFromConsul() {
+	actual, _ := Consul{}.GetScaleCalc(s.Server.URL, s.ServiceName, "")
 
-	suite.Equal(suite.ConsulScale, actual)
+	s.Equal(s.ConsulScale, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_ReturnsErrorFromHttpGet() {

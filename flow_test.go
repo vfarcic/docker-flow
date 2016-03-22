@@ -433,20 +433,21 @@ func Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets(t *testing.T) {
 
 func Test_Proxy_InvokesProvision(t *testing.T) {
 	opts := Opts{
-		ProxyHost: "myProxyHost",
+		ProxyDockerHost: "myProxyDockerHost",
+		ProxyDockerCertPath: "myProxyCertPath",
 		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
 	}
-	mockObj := getProxyMock(opts.ProxyHost, opts.ServiceDiscoveryAddress, "")
+	mockObj := getProxyMock("")
 
 	Flow{}.Proxy(opts, mockObj)
 
-	mockObj.AssertCalled(t, "Provision", opts.ProxyHost, opts.ServiceDiscoveryAddress)
+	mockObj.AssertCalled(t, "Provision", opts.ProxyDockerHost, opts.ProxyDockerCertPath, opts.ServiceDiscoveryAddress)
 }
 
 func Test_Proxy_ReturnsError_WhenFailure(t *testing.T) {
 	opts := Opts{}
-	mockObj := getProxyMock("", "", "Provision")
-	mockObj.On("Provision", mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj := getProxyMock("Provision")
+	mockObj.On("Provision", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
 
 	actual := Flow{}.Proxy(opts, mockObj)
 

@@ -32,7 +32,7 @@ func (s *MainTestSuite) SetupTest() {
 	s.dc = getDockerComposeMock(s.opts, "")
 	dockerCompose = s.dc
 	flow = getFlowMock("")
-	haProxy = getProxyMock(s.opts.Host, s.opts.ServiceDiscoveryAddress, "")
+	haProxy = getProxyMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	logFatal = func(v ...interface{}) { }
 	logPrintln = func(v ...interface{}) { }

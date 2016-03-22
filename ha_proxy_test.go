@@ -5,20 +5,44 @@ import (
 	"testing"
 	"os/exec"
 	"fmt"
+	"net/http/httptest"
+	"net/http"
 )
 
 type HaProxyTestSuite struct {
 	suite.Suite
 	ScAddress 		string
 	Host      		string
+	CertPath  		string
 	ExitedMessage 	string
-
+	ProxyHost		string
+	Project		 	string
+	ServicePath		string
+	ReconfPort		string
+	Server          *httptest.Server
 }
 
 func (s *HaProxyTestSuite) SetupTest() {
 	s.ScAddress = "1.2.3.4:1234"
 	s.Host = "tcp://my-docker-proxy-host"
+	s.ProxyHost = "my-docker-proxy-host.com"
+	s.Project = "myProject"
+	s.ServicePath = "/path/to/my/service"
 	s.ExitedMessage = "Exited (2) 15 seconds ago"
+	s.ReconfPort = "5362"
+	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reconfigureUrl := fmt.Sprintf(
+			"/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
+			s.Project,
+			s.ServicePath,
+		)
+		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
+		if (r.Method == "GET") {
+			if (actualUrl == reconfigureUrl) {
+				w.WriteHeader(http.StatusOK)
+			}
+		}
+	}))
 	runHaProxyRunCmd = func(cmd *exec.Cmd) error {
 		return nil
 	}
@@ -35,17 +59,23 @@ func (s *HaProxyTestSuite) SetupTest() {
 
 func (s HaProxyTestSuite) Test_Provision_SetsDockerHost() {
 	actual := ""
-	SetDockerHost = func(host string) {
+	SetDockerHost = func(host, certPath string) {
 		actual = host
 	}
 
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Equal(s.Host, actual)
 }
 
 func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenProxyHostIsEmpty() {
-	err := HaProxy{}.Provision("", s.ScAddress)
+	err := HaProxy{}.Provision("", s.ReconfPort, s.CertPath, s.ScAddress)
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenScAddressIsEmpty() {
+	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, "")
 
 	s.Error(err)
 }
@@ -56,7 +86,7 @@ func (s HaProxyTestSuite) Test_Provision_RunsDockerFlowProxyContainer() {
 		"docker", "run", "-d",
 		"--name", "docker-flow-proxy",
 		"-e", fmt.Sprintf("%s=%s", "CONSUL_ADDRESS", s.ScAddress),
-		"-p", "80:80",
+		"-p", "80:80", "-p", fmt.Sprintf("%s:8080", s.ReconfPort),
 		"vfarcic/docker-flow-proxy",
 	}
 	runHaProxyRunCmd = func(cmd *exec.Cmd) error {
@@ -64,7 +94,7 @@ func (s HaProxyTestSuite) Test_Provision_RunsDockerFlowProxyContainer() {
 		return nil
 	}
 
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Equal(expected, actual)
 }
@@ -74,7 +104,7 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenFailure() {
 		return fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Provision(s.Host, s.ScAddress)
+	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Error(err)
 }
@@ -91,7 +121,7 @@ func (s HaProxyTestSuite) Test_Provision_RunsDockerPs() {
 		return nil
 	}
 
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Equal(expected, actual)
 }
@@ -101,7 +131,7 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenPsFailure() {
 		return fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Provision(s.Host, s.ScAddress)
+	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Error(err)
 }
@@ -111,7 +141,7 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenProxyFails() {
 		return fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Provision(s.Host, s.ScAddress)
+	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Error(err)
 }
@@ -126,7 +156,7 @@ func (s HaProxyTestSuite) Test_Provision_DoesNotRun_WhenProxyExists() {
 		cmd.Stdout.Write([]byte("Up 3 hours"))
 		return nil
 	}
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.False(actual)
 }
@@ -147,7 +177,7 @@ func (s HaProxyTestSuite) Test_Provision_StartsAndDoesNotRun_WhenProxyIsExited()
 		return nil
 	}
 
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.True(start)
 	s.False(run)
@@ -165,7 +195,7 @@ func (s HaProxyTestSuite) Test_Provision_StartsDockerFlowProxyContainer_WhenProx
 		return nil
 	}
 
-	HaProxy{}.Provision(s.Host, s.ScAddress)
+	HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Equal(expected, actual)
 }
@@ -179,14 +209,79 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenStartFailure() {
 		return fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Provision(s.Host, s.ScAddress)
+	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
 
 	s.Error(err)
 }
 
+// Reconfigure
 
-// TODO: Test that container is run only if not present
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProxyHostIsEmpty() {
+	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.ServicePath)
 
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProjectIsEmpty() {
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.ServicePath)
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathIsEmpty() {
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "")
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenReconfPortIsEmpty() {
+	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.ServicePath)
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
+	actual := ""
+	expected := fmt.Sprintf(
+		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
+		s.ProxyHost,
+		s.ReconfPort,
+		s.Project,
+		s.ServicePath,
+	)
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		actual = url
+		return nil, fmt.Errorf("This is an error")
+	}
+
+	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.ServicePath)
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenRequestFails() {
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		return nil, fmt.Errorf("This is an error")
+	}
+
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.ServicePath)
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenResponseCodeIsNot2xx() {
+	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+
+	err := HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.ServicePath)
+
+	s.Error(err)
+}
 
 // Suite
 

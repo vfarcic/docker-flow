@@ -1,3 +1,5 @@
+TODO: Change the example to three VMs (swarm-master/proxy, swarm-node-1, swarm-node-2)
+
 ```bash
 go test --cover
 ```

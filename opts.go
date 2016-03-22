@@ -31,8 +31,10 @@ type Opts struct {
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
 	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number." yaml:"scale" envconfig:"scale"`
 	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\nproxy: Reconfigures the proxy\n" yaml:"flow" envconfig:"flow"`
-	ProxyHost        		string 		`long:"proxy-host" description:"Docker daemon socket of the proxy host." yaml:"proxy_host" envconfig:"proxy_host"`
-	ProxyCertPath        	string 		`long:"proxy-cert-path" description:"Docker certification path." yaml:"proxy_cert_path" envconfig:"proxy_cert_path"`
+	ProxyHost        		string 		`long:"proxy-host" description:"The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used." yaml:"proxy_host" envconfig:"proxy_host"`
+	ProxyDockerHost			string		`long:"proxy-docker-host" description:"Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used." yaml:"proxy_docker_host" envconfig:"proxy_docker_host"`
+	ProxyDockerCertPath     string 		`long:"proxy-docker-cert-path" description:"Docker certification path for the proxy host." yaml:"proxy_docker_cert_path" envconfig:"proxy_docker_cert_path"`
+	ProxyReconfPort			string		`long:"proxy-reconf-port" description:"The port used by the proxy to reconfigure its configuration" yaml:"proxy_reconf_port" envconfig:"proxy_reconf_port"`
 	ServiceName             string
 	CurrentColor    		string
 	NextColor       		string
@@ -121,6 +123,9 @@ func ProcessOpts(opts *Opts) (err error) {
 	}
 	if len(opts.ServiceName) == 0 {
 		opts.ServiceName = fmt.Sprintf("%s-%s", opts.Project, opts.Target)
+	}
+	if len(opts.ProxyReconfPort) == 0 {
+		opts.ProxyReconfPort = strconv.Itoa(ProxyReconfigureDefaultPort)
 	}
 	if opts.CurrentColor, err = sc.GetColor(opts.ServiceDiscoveryAddress, opts.ServiceName); err != nil {
 		return err

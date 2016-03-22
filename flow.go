@@ -74,7 +74,7 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string) error {
 }
 
 func (m Flow) Proxy(opts Opts, proxy Proxy) error {
-	return proxy.Provision(opts.ProxyHost, opts.ServiceDiscoveryAddress)
+	return proxy.Provision(opts.ProxyDockerHost, opts.ProxyReconfPort, opts.ProxyDockerCertPath, opts.ServiceDiscoveryAddress)
 }
 
 func (m Flow) GetTargets(opts Opts) []string {

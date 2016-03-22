@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"os"
 	"strings"
+	"strconv"
 )
 
 // Setup
@@ -98,6 +99,13 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsServiceNameToProjectAndTarget() {
 	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.ServiceName)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_SetsPortTo8080_WhenEmpty() {
+	s.opts.ProxyReconfPort = ""
+	ProcessOpts(&s.opts)
+
+	s.Equal(strconv.Itoa(ProxyReconfigureDefaultPort), s.opts.ProxyReconfPort)
 }
 
 func (s OptsTestSuite) Test_ProcessOpts_DoesNotSetServiceNameWhenNotEmpty() {
@@ -193,14 +201,16 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		key 		string
 		value		*string
 	}{
-		{"myHost", 				"FLOW_HOST", 	&s.opts.Host},
-		{"myComposePath", 		"FLOW_COMPOSE_PATH", 	&s.opts.ComposePath},
-		{"myTarget", 			"FLOW_TARGET", 			&s.opts.Target},
-		{"myProject", 			"FLOW_PROJECT", 		&s.opts.Project},
-		{"mySDAddress", 		"FLOW_CONSUL_ADDRESS", 	&s.opts.ServiceDiscoveryAddress},
-		{"myScale", 			"FLOW_SCALE", 			&s.opts.Scale},
-		{"myProxyHost", 		"FLOW_PROXY_HOST", 		&s.opts.ProxyHost},
-		{"myProxyCertPath", 	"FLOW_PROXY_CERT_PATH", &s.opts.ProxyCertPath},
+		{"myHost", 				"FLOW_HOST", 					&s.opts.Host},
+		{"myComposePath", 		"FLOW_COMPOSE_PATH", 			&s.opts.ComposePath},
+		{"myTarget", 			"FLOW_TARGET", 					&s.opts.Target},
+		{"myProject", 			"FLOW_PROJECT", 				&s.opts.Project},
+		{"mySDAddress", 		"FLOW_CONSUL_ADDRESS", 			&s.opts.ServiceDiscoveryAddress},
+		{"myScale", 			"FLOW_SCALE", 					&s.opts.Scale},
+		{"myProxyHost", 		"FLOW_PROXY_HOST", 				&s.opts.ProxyHost},
+		{"myProxyDockerHost", 	"FLOW_PROXY_DOCKER_HOST", 		&s.opts.ProxyDockerHost},
+		{"myProxyCertPath", 	"FLOW_PROXY_DOCKER_CERT_PATH",	&s.opts.ProxyDockerCertPath},
+		{"4357",				"FLOW_PROXY_RECONF_PORT",		&s.opts.ProxyReconfPort},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -281,14 +291,16 @@ func (s OptsTestSuite) TestParseArgs_LongStrings() {
 		key 		string
 		value		*string
 	}{
-		{"hostFromArgs", "host", &s.opts.Host},
-		{"composePathFromArgs", "compose-path", &s.opts.ComposePath},
-		{"targetFromArgs", "target", &s.opts.Target},
-		{"projectFromArgs", "project", &s.opts.Project},
-		{"addressFromArgs", "consul-address", &s.opts.ServiceDiscoveryAddress},
-		{"scaleFromArgs", "scale", &s.opts.Scale},
-		{"proxyHostFromArgs", "proxy-host", &s.opts.ProxyHost},
-		{"proxyCertPathFromArgs", "proxy-cert-path", &s.opts.ProxyCertPath},
+		{"hostFromArgs", 			"host", 					&s.opts.Host},
+		{"composePathFromArgs",		"compose-path", 			&s.opts.ComposePath},
+		{"targetFromArgs", 			"target", 					&s.opts.Target},
+		{"projectFromArgs", 		"project", 					&s.opts.Project},
+		{"addressFromArgs", 		"consul-address", 			&s.opts.ServiceDiscoveryAddress},
+		{"scaleFromArgs", 			"scale", 					&s.opts.Scale},
+		{"proxyDomainFromArgs",		"proxy-host", 				&s.opts.ProxyHost},
+		{"proxyHostFromArgs", 		"proxy-docker-host", 		&s.opts.ProxyDockerHost},
+		{"proxyCertPathFromArgs", 	"proxy-docker-cert-path", 	&s.opts.ProxyDockerCertPath},
+		{"1234", 					"proxy-reconf-port", 		&s.opts.ProxyReconfPort},
 	}
 
 	for _, d := range data {
@@ -441,7 +453,9 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	flow1 := "deploy"
 	flow2 := "stop-old"
 	proxyHost := "proxyHostFromYml"
-	proxyCertPath := "proxyCertPathFromYml"
+	proxyDockerHost := "proxyDomainFromYml"
+	proxyDockerCertPath := "proxyCertPathFromYml"
+	proxyReconfPort := "1245"
 	yml := fmt.Sprintf(`
 host: %s
 compose_path: %s
@@ -456,14 +470,16 @@ project: %s
 consul_address: %s
 scale: %s
 proxy_host: %s
-proxy_cert_path: %s
+proxy_docker_host: %s
+proxy_docker_cert_path: %s
+proxy_reconf_port: %s
 flow:
   - %s
   - %s
 `,
 		host, composePath, target, sideTarget1, sideTarget2,
-		project, consulAddress, scale, proxyHost, proxyCertPath,
-		flow1, flow2,
+		project, consulAddress, scale, proxyHost, proxyDockerHost,
+		proxyDockerCertPath, proxyReconfPort, flow1, flow2,
 	)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
@@ -482,6 +498,9 @@ flow:
 	s.Equal(consulAddress, s.opts.ServiceDiscoveryAddress)
 	s.Equal(scale, s.opts.Scale)
 	s.Equal(proxyHost, s.opts.ProxyHost)
+	s.Equal(proxyDockerHost, s.opts.ProxyDockerHost)
+	s.Equal(proxyDockerCertPath, s.opts.ProxyDockerCertPath)
+	s.Equal(proxyReconfPort, s.opts.ProxyReconfPort)
 	s.Equal([]string{flow1, flow2}, s.opts.Flow)
 }
 

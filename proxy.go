@@ -1,6 +1,7 @@
 package main
 
 type Proxy interface {
-	Provision(host, scAddress string) error
+	Provision(host, reconfPort, certPath, scAddress string) error
+	Reconfigure(domain, reconfPort, project, servicePath string) error
 }
 

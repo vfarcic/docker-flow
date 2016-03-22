@@ -92,7 +92,7 @@ func (dc DockerCompose) StopTargets(host, project string, targets []string) erro
 
 func (dc DockerCompose) getArgs(host, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
-	SetDockerHost(host)
+	SetDockerHost(host, "")
 	if (len(project) > 0) {
 		args = append(args, "-p", project)
 	}
