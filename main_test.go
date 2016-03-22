@@ -32,9 +32,9 @@ func (s *MainTestSuite) SetupTest() {
 	s.dc = getDockerComposeMock(s.opts, "")
 	dockerCompose = s.dc
 	flow = getFlowMock("")
+	haProxy = getProxyMock(s.opts.Host, s.opts.ServiceDiscoveryAddress, "")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	logFatal = func(v ...interface{}) { }
-	osExit = func(code int) { }
 	logPrintln = func(v ...interface{}) { }
 	deployed = false
 }
@@ -45,14 +45,14 @@ func (s MainTestSuite) Test_Main_Exits_WhenGetOptsFails() {
 	GetOpts = func() (Opts, error) {
 		return s.opts, fmt.Errorf("This is an error")
 	}
-	actual := 0
-	osExit = func(code int) {
-		actual = code
+	actual := false
+	logFatal = func(v ...interface{}) {
+		actual = true
 	}
 
 	main()
 
-	s.Equal(1, actual)
+	s.True(actual)
 }
 
 // main > deploy
@@ -126,75 +126,6 @@ func (s MainTestSuite) Test_Main_LogsFatal_WhenDeployAndServiceDiscoveryPutColor
 
 // main > scale
 
-func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFile_WhenScaleAndNotDeploy() {
-	mockObj := getDockerComposeMock(s.opts, "")
-	GetOpts = func() (Opts, error) {
-		s.opts.Flow = []string{"scale"}
-		return s.opts, nil
-	}
-	dockerCompose = mockObj
-
-	main()
-
-	mockObj.AssertCalled(
-		s.T(),
-		"CreateFlowFile",
-		s.opts.ComposePath,
-		dockerComposeFlowPath,
-		s.opts.Target,
-		s.opts.CurrentColor,
-		s.opts.BlueGreen,
-	)
-}
-
-func (s MainTestSuite) Test_Main_DoesNotInvokeDockerComposeCreateFlowFile_WhenDeployAndScale() {
-	mockObj := getDockerComposeMock(s.opts, "")
-	GetOpts = func() (Opts, error) {
-		s.opts.Flow = []string{"deploy", "scale"}
-		return s.opts, nil
-	}
-	dockerCompose = mockObj
-
-	main()
-
-	mockObj.AssertNotCalled(
-		s.T(),
-		"CreateFlowFile",
-		s.opts.ComposePath,
-		dockerComposeFlowPath,
-		s.opts.Target,
-		s.opts.CurrentColor,
-		s.opts.BlueGreen,
-	)
-}
-
-func (s MainTestSuite) Test_Main_LogsFatal_WhenScaleAndCreateFlowFileFails() {
-	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
-	mockObj.On(
-		"CreateFlowFile",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(fmt.Errorf("This is an error"))
-	dockerCompose = mockObj
-	GetOpts = func() (Opts, error) {
-		s.opts.Flow = []string{"scale"}
-		s.opts.BlueGreen = false
-		return s.opts, nil
-	}
-	deployed = false
-	actual := false
-	logFatal = func(v ...interface{}) {
-		actual = true
-	}
-
-	main()
-
-	s.True(actual)
-}
-
 func (s MainTestSuite) Test_Main_InvokesFlowScale_WhenScaleAndNotDeploy() {
 	mockObj := getFlowMock("")
 	GetOpts = func() (Opts, error) {
@@ -254,7 +185,6 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithCurrentCo
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
-		dockerComposeFlowPath,
 		s.opts.Target,
 		s.opts.CurrentColor,
 		s.opts.BlueGreen,
@@ -275,7 +205,6 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithNextColor
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
-		dockerComposeFlowPath,
 		s.opts.Target,
 		s.opts.NextColor,
 		s.opts.BlueGreen,
@@ -389,21 +318,69 @@ func (s MainTestSuite) Test_Main_DoesNotRunStopOld_WhenStopOldAndNotBlueGreen() 
 	)
 }
 
-// main > cleanup
 
-func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow() {
+
+
+
+func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow_WhenStopOld() {
 	mockObj := getDockerComposeMock(s.opts, "")
 	dockerCompose = mockObj
+	GetOpts = func() (Opts, error) {
+		s.opts.Flow = []string{"stop-old"}
+		return s.opts, nil
+	}
 
 	main()
 
 	mockObj.AssertCalled(s.T(), "RemoveFlow")
 }
 
-func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenDockerComposeRemoveFlowFails() {
+func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeRemoveFlowFails() {
 	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
 	mockObj.On("RemoveFlow").Return(fmt.Errorf("This is an error"))
 	dockerCompose = mockObj
+	actual := false
+	logFatal = func(v ...interface{}) {
+		actual = true
+	}
+	GetOpts = func() (Opts, error) {
+		s.opts.Flow = []string{"stop-old"}
+		return s.opts, nil
+	}
+
+	main()
+
+	s.True(actual)
+}
+
+// main > proxy
+
+func (s MainTestSuite) Test_Main_InvokesFlawProxy() {
+	mockObj := getFlowMock("")
+	flow = mockObj
+	GetOpts = func() (Opts, error) {
+		s.opts.Flow = []string{"proxy"}
+		return s.opts, nil
+	}
+
+	main()
+
+	mockObj.AssertCalled(
+		s.T(),
+		"Proxy",
+		s.opts,
+		haProxy,
+	)
+}
+
+func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenFlawProxyFails() {
+	mockObj := getFlowMock("Proxy")
+	mockObj.On("Proxy", mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	flow = mockObj
+	GetOpts = func() (Opts, error) {
+		s.opts.Flow = []string{"proxy"}
+		return s.opts, nil
+	}
 	actual := false
 	logFatal = func(v ...interface{}) {
 		actual = true

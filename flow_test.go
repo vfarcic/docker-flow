@@ -64,7 +64,6 @@ func (s FlowTestSuite) Test_Deploy_InvokesDockerComposeCreateFlowFile_WhenDeploy
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
-		dockerComposeFlowPath,
 		s.opts.Target,
 		s.opts.NextColor,
 		s.opts.BlueGreen,
@@ -75,7 +74,6 @@ func (s MainTestSuite) Test_Deploy_ReturnsError_WhenDeployAndDockerComposeCreate
 	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
 	mockObj.On(
 		"CreateFlowFile",
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -248,6 +246,62 @@ func Test_DeployInvokesPutScale(t *testing.T) {
 	scMockObj.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 }
 
+// Deploy > RemoveFlow
+
+func (s FlowTestSuite) Test_Deploy_InvokesDockerComposeRemoveFlow() {
+	mockObj := getDockerComposeMock(s.opts, "")
+	s.dc = mockObj
+
+	Flow{}.Deploy(s.opts, s.dc)
+
+	mockObj.AssertCalled(s.T(), "RemoveFlow")
+}
+
+func (s FlowTestSuite) Test_Deploy_ReturnsError_WhenDockerComposeRemoveFlowFails() {
+	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
+	mockObj.On("RemoveFlow",).Return(fmt.Errorf("This is an error"))
+	s.dc = mockObj
+
+	err := Flow{}.Deploy(s.opts, s.dc)
+
+	s.Error(err)
+}
+
+// Scale > CreateFlowFile
+
+func (s FlowTestSuite) Test_Scale_InvokesDockerComposeCreateFlowFile() {
+	mockObj := getDockerComposeMock(s.opts, "")
+	s.dc = mockObj
+
+	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+
+	mockObj.AssertCalled(
+		s.T(),
+		"CreateFlowFile",
+		s.opts.ComposePath,
+		s.opts.Target,
+		s.opts.CurrentColor,
+		s.opts.BlueGreen,
+	)
+}
+
+func (s MainTestSuite) Test_Scale_ReturnsError_WhenDeployAndDockerComposeCreateFlowFileFails() {
+	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
+	mockObj.On(
+		"CreateFlowFile",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
+	s.dc = mockObj
+
+	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+
+	s.Error(err)
+}
+
+
 // Scale > GetScaleCalc
 
 func Test_ScaleReturnsError_WhenGetScaleCalcFails(t *testing.T) {
@@ -310,6 +364,27 @@ func Test_ScaleInvokesPutScale(t *testing.T) {
 	Flow{}.Scale(opts, mockObj, "myTarget")
 
 	scMockObj.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
+}
+
+// Deploy > RemoveFlow
+
+func (s FlowTestSuite) Test_Scale_InvokesDockerComposeRemoveFlow() {
+	mockObj := getDockerComposeMock(s.opts, "")
+	s.dc = mockObj
+
+	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+
+	mockObj.AssertCalled(s.T(), "RemoveFlow")
+}
+
+func (s FlowTestSuite) Test_Scale_ReturnsError_WhenDockerComposeRemoveFlowFails() {
+	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
+	mockObj.On("RemoveFlow",).Return(fmt.Errorf("This is an error"))
+	s.dc = mockObj
+
+	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+
+	s.Error(err)
 }
 
 // GetTargets

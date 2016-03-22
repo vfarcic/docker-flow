@@ -200,6 +200,7 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		{"mySDAddress", 		"FLOW_CONSUL_ADDRESS", 	&s.opts.ServiceDiscoveryAddress},
 		{"myScale", 			"FLOW_SCALE", 			&s.opts.Scale},
 		{"myProxyHost", 		"FLOW_PROXY_HOST", 		&s.opts.ProxyHost},
+		{"myProxyCertPath", 	"FLOW_PROXY_CERT_PATH", &s.opts.ProxyCertPath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -287,6 +288,7 @@ func (s OptsTestSuite) TestParseArgs_LongStrings() {
 		{"addressFromArgs", "consul-address", &s.opts.ServiceDiscoveryAddress},
 		{"scaleFromArgs", "scale", &s.opts.Scale},
 		{"proxyHostFromArgs", "proxy-host", &s.opts.ProxyHost},
+		{"proxyCertPathFromArgs", "proxy-cert-path", &s.opts.ProxyCertPath},
 	}
 
 	for _, d := range data {
@@ -308,7 +310,6 @@ func (s OptsTestSuite) TestParseArgs_ShortStrings() {
 		{"projectFromArgs", "p", &s.opts.Project},
 		{"addressFromArgs", "c", &s.opts.ServiceDiscoveryAddress},
 		{"scaleFromArgs", "s", &s.opts.Scale},
-		{"proxyHostFromArgs", "r", &s.opts.ProxyHost},
 	}
 
 	for _, d := range data {
@@ -440,6 +441,7 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	flow1 := "deploy"
 	flow2 := "stop-old"
 	proxyHost := "proxyHostFromYml"
+	proxyCertPath := "proxyCertPathFromYml"
 	yml := fmt.Sprintf(`
 host: %s
 compose_path: %s
@@ -454,10 +456,15 @@ project: %s
 consul_address: %s
 scale: %s
 proxy_host: %s
+proxy_cert_path: %s
 flow:
   - %s
   - %s
-`, host, composePath, target, sideTarget1, sideTarget2, project, consulAddress, scale, proxyHost, flow1, flow2)
+`,
+		host, composePath, target, sideTarget1, sideTarget2,
+		project, consulAddress, scale, proxyHost, proxyCertPath,
+		flow1, flow2,
+	)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
 	}

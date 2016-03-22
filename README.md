@@ -21,7 +21,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 
 |Command argument       |Environment variable  |YML              |Description|
 |-----------------------|----------------------|-----------------|-----------|
-|-F, --flow             |FLOW                  |flow             |The actions that should be performed as the flow. (**multi**)<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>(**default**: [deploy])|
+|-F, --flow             |FLOW                  |flow             |The actions that should be performed as the flow. (**multi**)<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(**default**: [deploy])|
 |-H, --host             |FLOW_HOST             |host             |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
 |-f, --compose-path     |FLOW_COMPOSE_PATH     |compose_path     |Path to the Docker Compose configuration file. (**default**: docker-compose.yml)|
 |-b, --blue-green       |FLOW_BLUE_GREEN       |blue_green       |Perform blue-green deployment. (**bool**)|

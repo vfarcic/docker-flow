@@ -21,12 +21,11 @@ func getFlow() Flowable {
 func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 	if err := dc.CreateFlowFile(
 		opts.ComposePath,
-		dockerComposeFlowPath,
 		opts.Target,
 		opts.NextColor,
 		opts.BlueGreen,
 	); err != nil {
-		return fmt.Errorf("Creationg of the Docker Flow file failed\n%v", err)
+		return fmt.Errorf("Failed to create the Docker Flow file\n%v\n", err)
 	}
 
 	targets := m.GetTargets(opts)
@@ -44,10 +43,21 @@ func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 	if err := m.Scale(opts, dc, opts.NextTarget); err != nil {
 		return err
 	}
+	if err := dc.RemoveFlow(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (m Flow) Scale(opts Opts, dc DockerComposable, target string) error {
+	if err := dc.CreateFlowFile(
+		opts.ComposePath,
+		opts.Target,
+		opts.CurrentColor,
+		opts.BlueGreen,
+	); err != nil {
+		return fmt.Errorf("Failed to create the Docker Flow file\n%v\n", err)
+	}
 	sc := getServiceDiscovery()
 	scale, err := sc.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
 	if err != nil {
@@ -57,6 +67,9 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string) error {
 		return fmt.Errorf("The deployment phase failed\n%v", err)
 	}
 	sc.PutScale(opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
+	if err := dc.RemoveFlow(); err != nil {
+		return err
+	}
 	return nil
 }
 

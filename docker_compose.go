@@ -14,7 +14,7 @@ var getDockerCompose = func() DockerComposable {
 }
 
 type DockerComposable interface {
-	CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error
+	CreateFlowFile(dcPath, target, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, project string, targets []string) error
 	UpTargets(host, project string, targets []string) error
@@ -25,7 +25,7 @@ type DockerComposable interface {
 
 type DockerCompose struct{}
 
-func (dc DockerCompose) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
+func (dc DockerCompose) CreateFlowFile(dcPath, target, color string, blueGreen bool) error {
 	data, err := readFile(dcPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)
@@ -36,7 +36,7 @@ func (dc DockerCompose) CreateFlowFile(dcPath, dfPath, target, color string, blu
 		new := fmt.Sprintf("%s-%s:", target, color)
 		s = strings.Replace(string(data), old, new, 1)
 	}
-	err = writeFile(dfPath, []byte(s), 0644)
+	err = writeFile(dockerComposeFlowPath, []byte(s), 0644)
 	if err != nil {
 		return fmt.Errorf("Could not write the Docker Flow file %s\n%v", dockerComposeFlowPath, err)
 	}

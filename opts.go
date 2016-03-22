@@ -30,8 +30,9 @@ type Opts struct {
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
 	Scale                   string		`short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number." yaml:"scale" envconfig:"scale"`
-	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\n" yaml:"flow" envconfig:"flow"`
-	ProxyHost        		string 		`short:"r" long:"proxy-host" description:"Docker daemon socket of the proxy host." yaml:"proxy_host" envconfig:"proxy_host"`
+	Flow		            []string 	`short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\nproxy: Reconfigures the proxy\n" yaml:"flow" envconfig:"flow"`
+	ProxyHost        		string 		`long:"proxy-host" description:"Docker daemon socket of the proxy host." yaml:"proxy_host" envconfig:"proxy_host"`
+	ProxyCertPath        	string 		`long:"proxy-cert-path" description:"Docker certification path." yaml:"proxy_cert_path" envconfig:"proxy_cert_path"`
 	ServiceName             string
 	CurrentColor    		string
 	NextColor       		string

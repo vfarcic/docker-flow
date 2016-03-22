@@ -43,7 +43,7 @@ func (s *DockerComposeTestSuite) SetupTest() {
 // CreateFlow
 
 func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsNil() {
-	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
 
 	s.Nil(actual)
 }
@@ -53,7 +53,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenReadFile() 
 		return []byte(""), fmt.Errorf("Some error")
 	}
 
-	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -65,7 +65,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesTheFile() {
 		return nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
 
 	s.Equal(dockerComposeFlowPath, actual)
 }
@@ -77,7 +77,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesDockerComposeReplica(
 		return []byte(""), nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
 
 	s.Equal(s.dockerComposePath, actual)
 }
@@ -99,7 +99,7 @@ services:
 		return nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, target, color, true)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, target, color, true)
 
 	s.Equal(expected, actual)
 }
@@ -109,7 +109,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenWriteFile()
 		return fmt.Errorf("Some error")
 	}
 
-	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, dockerComposeFlowPath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -241,8 +241,8 @@ type DockerComposeMock struct{
 	mock.Mock
 }
 
-func (m *DockerComposeMock) CreateFlowFile(dcPath, dfPath, target, color string, blueGreen bool) error {
-	args := m.Called(dcPath, dfPath, target, color, blueGreen)
+func (m *DockerComposeMock) CreateFlowFile(dcPath, target, color string, blueGreen bool) error {
+	args := m.Called(dcPath, target, color, blueGreen)
 	return args.Error(0)
 }
 

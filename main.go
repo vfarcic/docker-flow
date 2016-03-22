@@ -4,7 +4,6 @@ package main
 import (
 	"log"
 	"strings"
-	"os"
 )
 
 func init() {
@@ -13,17 +12,17 @@ func init() {
 }
 
 var logFatal = log.Fatal
-var osExit = os.Exit
 var logPrintln = log.Println
 var deployed = false
 
 func main() {
+//	createdFlow := false
 	flow := getFlow()
 	sc := getServiceDiscovery()
 
 	opts, err := GetOpts()
 	if err != nil {
-		osExit(1)
+		logFatal(err)
 	}
 	dc := getDockerCompose()
 
@@ -48,17 +47,6 @@ func main() {
 		case "scale":
 			if !deployed {
 				logPrintln("Scaling...")
-				// TODO: Move to flow
-				if err := dc.CreateFlowFile(
-					opts.ComposePath,
-					dockerComposeFlowPath,
-					opts.Target,
-					opts.CurrentColor,
-					opts.BlueGreen,
-				); err != nil {
-					logFatal(err)
-				}
-				// TODO: End Move to flow
 				if err := flow.Scale(opts, dc, opts.CurrentTarget); err != nil {
 					logFatal(err)
 				}
@@ -73,18 +61,22 @@ func main() {
 					target = opts.NextTarget
 					color = opts.NextColor
 				}
-				if err := dc.CreateFlowFile(opts.ComposePath, dockerComposeFlowPath, opts.Target, color, opts.BlueGreen); err != nil {
+				if err := dc.CreateFlowFile(opts.ComposePath, opts.Target, color, opts.BlueGreen); err != nil {
 					logFatal(err)
 				}
 				if err := dc.StopTargets(opts.Host, opts.Project, []string{target}); err != nil {
 					logFatal(err)
 				}
+				if err := dc.RemoveFlow(); err != nil {
+					logFatal(err)
+				}
 			}
 			// TODO: End Move to flow
+		case "proxy":
+			if err := flow.Proxy(opts, haProxy); err != nil {
+				logFatal(err)
+			}
 		}
-	}
-	// cleanup
-	if err := dc.RemoveFlow(); err != nil {
-		logFatal(err)
+
 	}
 }

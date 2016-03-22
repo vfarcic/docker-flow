@@ -1,6 +1,8 @@
 package main
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/stretchr/testify/mock"
+)
 
 // Mock
 
