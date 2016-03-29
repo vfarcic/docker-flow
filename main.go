@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"strings"
+	"fmt"
 )
 
 func init() {
@@ -28,8 +29,7 @@ func main() {
 
 	for _, step := range opts.Flow {
 		switch strings.ToLower(step) {
-		case "deploy":
-			logPrintln("Deploying...")
+		case FLOW_DEPLOY:
 			if err := flow.Deploy(opts, dc); err != nil {
 				logFatal(err)
 			}
@@ -44,27 +44,27 @@ func main() {
 				logFatal(err)
 			}
 			// TODO: End Move to flow
-		case "scale":
+		case FLOW_SCALE:
 			if !deployed {
 				logPrintln("Scaling...")
-				if err := flow.Scale(opts, dc, opts.CurrentTarget); err != nil {
+				if err := flow.Scale(opts, dc, opts.CurrentTarget, true); err != nil {
 					logFatal(err)
 				}
 			}
-		case "stop-old":
+		case FLOW_STOP_OLD:
 			// TODO: Move to flow
 			if opts.BlueGreen {
-				logPrintln("Stopping old...")
 				target := opts.CurrentTarget
 				color := opts.CurrentColor
 				if !deployed {
 					target = opts.NextTarget
 					color = opts.NextColor
 				}
+				logPrintln(fmt.Sprintf("Stopping old (%s)...", target))
 				if err := dc.CreateFlowFile(opts.ComposePath, opts.Target, color, opts.BlueGreen); err != nil {
 					logFatal(err)
 				}
-				if err := dc.StopTargets(opts.Host, opts.Project, []string{target}); err != nil {
+				if err := dc.StopTargets(opts.Host, opts.CertPath, opts.Project, []string{target}); err != nil {
 					logFatal(err)
 				}
 				if err := dc.RemoveFlow(); err != nil {
@@ -72,7 +72,7 @@ func main() {
 				}
 			}
 			// TODO: End Move to flow
-		case "proxy":
+		case FLOW_PROXY:
 			if err := flow.Proxy(opts, haProxy); err != nil {
 				logFatal(err)
 			}

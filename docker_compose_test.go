@@ -16,6 +16,7 @@ type DockerComposeTestSuite struct {
 	color             string
 	blueGreen         bool
 	host 			  string
+	certPath		  string
 	project 		  string
 }
 
@@ -25,6 +26,7 @@ func (s *DockerComposeTestSuite) SetupTest() {
 	s.color = "red"
 	s.blueGreen = false
 	s.host = "tcp://1.2.3.4:1234"
+	s.certPath = "/path/to/docker/cert"
 	s.project = "my-project"
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(""), nil
@@ -141,7 +143,7 @@ func (s DockerComposeTestSuite) Test_RemoveFlow_ReturnsError() {
 // PullTargets
 
 func (s DockerComposeTestSuite) Test_PullTargets_ReturnsNil_WhenTargetsAreEmpty() {
-	actual := DockerCompose{}.PullTargets(s.host, s.project, []string{})
+	actual := DockerCompose{}.PullTargets(s.host, s.certPath, s.project, []string{})
 
 	s.Nil(actual)
 }
@@ -159,7 +161,7 @@ func (s DockerComposeTestSuite) Test_UpTargets() {
 // ScaleTargets
 
 func (s DockerComposeTestSuite) Test_ScaleTargets_ReturnsNil_WhenTargetIsEmpty() {
-	actual := DockerCompose{}.ScaleTargets(s.host, s.project, "", 8)
+	actual := DockerCompose{}.ScaleTargets(s.host, s.certPath, s.project, "", 8)
 
 	s.Nil(actual)
 }
@@ -169,7 +171,7 @@ func (s DockerComposeTestSuite) Test_ScaleTargets_CreatesTheCommand() {
 	expected := []string{"docker-compose", "-f", dockerComposeFlowPath, "-p", s.project, "scale", fmt.Sprintf("%s=%d", s.target, scale)}
 	actual := s.mockExecCmd()
 
-	DockerCompose{}.ScaleTargets(s.host, s.project, s.target, scale)
+	DockerCompose{}.ScaleTargets(s.host, s.certPath, s.project, s.target, scale)
 
 	s.Equal(expected, *actual)
 }
@@ -189,6 +191,12 @@ func (s DockerComposeTestSuite) Test_StopTargets() {
 // Suite
 
 func TestDockerComposeTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
 	suite.Run(t, new(DockerComposeTestSuite))
 }
 
@@ -204,34 +212,40 @@ func (s DockerComposeTestSuite) mockExecCmd() *[]string {
 	return &actualCommand
 }
 
-type testCmdType func(host, project string, targets []string) error
+type testCmdType func(host, certPath, project string, targets []string) error
 
 func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
 	var expected []string
 	var actual *[]string
 
 	// Returns nil when targets are empty
-	s.Nil(f(s.host, s.project, []string{}))
+	s.Nil(f(s.host, s.certPath, s.project, []string{}))
 
 	// Creates command
 	expected = append([]string{"docker-compose", "-f", dockerComposeFlowPath, "-p", s.project}, args...)
 	actual = s.mockExecCmd()
-	f(s.host, s.project, []string{s.target})
+	f(s.host, s.certPath, s.project, []string{s.target})
 	s.Equal(expected, *actual)
 
 	// Does not add project when empty
 	expected = append([]string{"docker-compose", "-f", dockerComposeFlowPath}, args...)
 	actual = s.mockExecCmd()
-	f(s.host, "", []string{s.target})
+	f(s.host, s.certPath, "", []string{s.target})
 	s.Equal(expected, *actual)
 
 	// Adds DOCKER_HOST variable
-	f(s.host, s.project, []string{s.target})
-	s.Contains(os.Environ(), fmt.Sprintf("DOCKER_HOST=%s", s.host))
+	f(s.host, s.certPath, s.project, []string{s.target})
+	host := s.host
+	s.Equal(host, s.host)
 
 	// Does not add DOCKER_HOST variable when empty
-	f("", s.project, []string{s.target})
-	s.NotContains(os.Environ(), fmt.Sprintf("DOCKER_HOST=%s", s.host))
+	f("", s.certPath, s.project, []string{s.target})
+	s.NotEqual(os.Getenv("DOCKER_HOST"), s.host)
+
+	// Adds DOCKER_CERT_PATH variable
+	f(s.host, s.certPath, s.project, []string{s.target})
+	s.Equal(os.Getenv("DOCKER_CERT_PATH"), s.certPath)
+
 }
 
 
@@ -251,50 +265,50 @@ func (m *DockerComposeMock) RemoveFlow() error {
 	return args.Error(0)
 }
 
-func (m *DockerComposeMock) PullTargets(host, project string, targets []string) error {
-	args := m.Called(host, project, targets)
+func (m *DockerComposeMock) PullTargets(host, certPath, project string, targets []string) error {
+	args := m.Called(host, certPath, project, targets)
 	return args.Error(0)
 }
 
-func (m *DockerComposeMock) UpTargets(host, project string, targets []string) error {
-	args := m.Called(host, project, targets)
+func (m *DockerComposeMock) UpTargets(host, certPath, project string, targets []string) error {
+	args := m.Called(host, certPath, project, targets)
 	return args.Error(0)
 }
 
-func (m *DockerComposeMock) ScaleTargets(host, project, target string, scale int) error {
-	args := m.Called(host, project, target, scale)
+func (m *DockerComposeMock) ScaleTargets(host, certPath, project, target string, scale int) error {
+	args := m.Called(host, certPath, project, target, scale)
 	return args.Error(0)
 }
 
-func (m *DockerComposeMock) RmTargets(host, project string, targets []string) error {
-	args := m.Called(host, project, targets)
+func (m *DockerComposeMock) RmTargets(host, certPath, project string, targets []string) error {
+	args := m.Called(host, certPath, project, targets)
 	return args.Error(0)
 }
 
-func (m *DockerComposeMock) StopTargets(host, project string, targets []string) error {
-	args := m.Called(host, project, targets)
+func (m *DockerComposeMock) StopTargets(host, certPath, project string, targets []string) error {
+	args := m.Called(host, certPath, project, targets)
 	return args.Error(0)
 }
 
 func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 	mockObj := new(DockerComposeMock)
 	if skipMethod != "PullTargets" {
-		mockObj.On("PullTargets", opts.Host, opts.Project, Flow{}.GetTargets(opts)).Return(nil)
+		mockObj.On("PullTargets", opts.Host, opts.CertPath, opts.Project, Flow{}.GetTargets(opts)).Return(nil)
 	}
 	if skipMethod != "UpTargets" {
-		mockObj.On("UpTargets", opts.Host, opts.Project, opts.SideTargets).Return(nil)
+		mockObj.On("UpTargets", opts.Host, opts.CertPath, opts.Project, opts.SideTargets).Return(nil)
 	}
 	if skipMethod != "RmTargets" {
-		mockObj.On("RmTargets", opts.Host, opts.Project, []string{opts.NextTarget}).Return(nil)
+		mockObj.On("RmTargets", opts.Host, opts.CertPath, opts.Project, []string{opts.NextTarget}).Return(nil)
 	}
 	if skipMethod != "ScaleTargets" {
-		mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "CreateFlowFile" {
-		mockObj.On("CreateFlowFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On("CreateFlowFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "StopTargets" {
-		mockObj.On("StopTargets", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On("StopTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "RemoveFlow" {
 		mockObj.On("RemoveFlow").Return(nil)

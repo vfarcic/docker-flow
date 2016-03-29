@@ -173,7 +173,7 @@ Let's repeat the deployment. This time, we'll specify the Consul address as an e
 ```bash
 export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
 
-./docker-flow --flow=deploy
+./docker-flow --flow deploy
 
 docker ps \
     --format "table{{.Image}}\t{{.Status}}\t{{.Names}}"

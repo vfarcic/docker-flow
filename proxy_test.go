@@ -15,8 +15,8 @@ func (m *ProxyMock) Provision(host, reconfPort, certPath, scAddress string) erro
 	return args.Error(0)
 }
 
-func (m *ProxyMock) Reconfigure(domain, reconfPort, serviceName, servicePath string) error {
-	args := m.Called(domain, reconfPort, serviceName, servicePath)
+func (m *ProxyMock) Reconfigure(host, reconfPort, serviceName string, servicePath []string) error {
+	args := m.Called(host, reconfPort, serviceName, servicePath)
 	return args.Error(0)
 }
 

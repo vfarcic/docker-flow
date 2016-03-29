@@ -2,10 +2,10 @@ package main
 
 import (
 	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"fmt"
 	"github.com/stretchr/testify/suite"
+	"os"
 )
 
 type FlowTestSuite struct {
@@ -26,6 +26,9 @@ func (s *FlowTestSuite) SetupTest() {
 		Flow: []string{"deploy", "scale"},
 		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
 		ServiceName: "myServiceName",
+		ProxyHost: "myProxyHost",
+		ProxyDockerHost: "myProxyDockerHost",
+		ProxyDockerCertPath: "myProxyCertPath",
 	}
 	GetOptsOrig := GetOpts
 	defer func() {
@@ -38,18 +41,20 @@ func (s *FlowTestSuite) SetupTest() {
 	dockerCompose = s.dc
 	flow = getFlowMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
+	logFatal = func(v ...interface{}) { }
+	logPrintln = func(v ...interface{}) { }
 }
 
 // Deploy
 
-func Test_DeployReturnsNil(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsNil() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "")
 	serviceDiscovery = getServiceDiscoveryMock(opts, "")
 
 	actual := Flow{}.Deploy(opts, mockObj)
 
-	assert.Nil(t, actual)
+	s.Nil(actual)
 }
 
 // Deploy > CreateFlowFile
@@ -88,7 +93,7 @@ func (s MainTestSuite) Test_Deploy_ReturnsError_WhenDeployAndDockerComposeCreate
 
 // Deploy > PullTargets
 
-func Test_DeployInvokesPullTargets(t *testing.T) {
+func (s FlowTestSuite) Test_DeployInvokesPullTargets() {
 	opts := Opts{
 		Host: "myHost",
 		Project: "myProject",
@@ -101,23 +106,23 @@ func Test_DeployInvokesPullTargets(t *testing.T) {
 
 	flow.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(t, "PullTargets", opts.Host, opts.Project, flow.GetTargets(opts))
+	mockObj.AssertCalled(s.T(), "PullTargets", opts.Host, opts.CertPath, opts.Project, flow.GetTargets(opts))
 }
 
-func Test_DeployReturnsError_WhenPullTargetsFails(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsError_WhenPullTargetsFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "PullTargets")
-	mockObj.On("PullTargets", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On("PullTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
 	serviceDiscovery = getServiceDiscoveryMock(opts, "")
 
 	actual := Flow{}.Deploy(opts, mockObj)
 
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
 // Deploy > UpTargets
 
-func Test_DeployInvokesUpTargets(t *testing.T) {
+func (s FlowTestSuite) Test_DeployInvokesUpTargets() {
 	opts := Opts{
 		Host: "myHost",
 		Project: "myProject",
@@ -128,23 +133,29 @@ func Test_DeployInvokesUpTargets(t *testing.T) {
 
 	Flow{}.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(t, "UpTargets", opts.Host, opts.Project, opts.SideTargets)
+	mockObj.AssertCalled(s.T(), "UpTargets", opts.Host, opts.CertPath, opts.Project, opts.SideTargets)
 }
 
-func Test_DeployReturnsError_WhenUpTargetsFails(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsError_WhenUpTargetsFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "UpTargets")
-	mockObj.On("UpTargets", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On(
+		"UpTargets",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
 	serviceDiscovery = getServiceDiscoveryMock(opts, "")
 
 	actual := Flow{}.Deploy(opts, mockObj)
 
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
 // Deploy > RmTargets
 
-func Test_DeployInvokesRmTargets(t *testing.T) {
+func (s FlowTestSuite) Test_DeployInvokesRmTargets() {
 	opts := Opts{
 		BlueGreen: true,
 		Host: "myHost",
@@ -156,10 +167,10 @@ func Test_DeployInvokesRmTargets(t *testing.T) {
 
 	Flow{}.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(t, "RmTargets", opts.Host, opts.Project, []string{opts.NextTarget})
+	mockObj.AssertCalled(s.T(), "RmTargets", opts.Host, opts.CertPath, opts.Project, []string{opts.NextTarget})
 }
 
-func Test_DeployDoesNotInvokeRmTargets_WhenBlueGreenIsFalse(t *testing.T) {
+func (s FlowTestSuite) Test_DeployDoesNotInvokeRmTargets_WhenBlueGreenIsFalse() {
 	opts := Opts{
 		BlueGreen: false,
 	}
@@ -168,23 +179,23 @@ func Test_DeployDoesNotInvokeRmTargets_WhenBlueGreenIsFalse(t *testing.T) {
 
 	Flow{}.Deploy(opts, mockObj)
 
-	mockObj.AssertNotCalled(t, "RmTargets", opts.Host, opts.Project, []string{opts.NextTarget})
+	mockObj.AssertNotCalled(s.T(), "RmTargets", opts.Host, opts.Project, []string{opts.NextTarget})
 }
 
-func Test_DeployReturnsError_WhenRmTargetsFails(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsError_WhenRmTargetsFails() {
 	opts := Opts{
 		BlueGreen: true,
 	}
 	mockObj := getDockerComposeMock(opts, "RmTargets")
-	mockObj.On("RmTargets", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On("RmTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
 
 	actual := Flow{}.Deploy(opts, mockObj)
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
 // Deploy > GetScaleCalc
 
-func Test_DeployReturnsError_WhenGetScaleCalcFails(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsError_WhenGetScaleCalcFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "")
 	scMockObj := getServiceDiscoveryMock(opts, "GetScaleCalc")
@@ -193,12 +204,12 @@ func Test_DeployReturnsError_WhenGetScaleCalcFails(t *testing.T) {
 
 	actual := Flow{}.Deploy(opts, mockObj)
 
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
-// Deploy > ScaleTargets
+// Deploy > Scale
 
-func Test_DeployInvokesScaleTargets(t *testing.T) {
+func (s FlowTestSuite) Test_DeployDoesNotInvokeScaleTargets() {
 	opts := Opts{
 		Host: "myHost",
 		Project: "myProject",
@@ -214,23 +225,50 @@ func Test_DeployInvokesScaleTargets(t *testing.T) {
 
 	flow.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(t, "ScaleTargets", opts.Host, opts.Project, opts.NextTarget, scale)
+	mockObj.AssertCalled(s.T(), "ScaleTargets", opts.Host, opts.CertPath, opts.Project, opts.NextTarget, scale)
 }
 
-func Test_DeployReturnsError_WhenScaleTargetsFails(t *testing.T) {
+func (s FlowTestSuite) Test_DeployReturnsError_WhenScaleTargetsFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "ScaleTargets")
-	mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On(
+		"ScaleTargets",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
 	serviceDiscovery = getServiceDiscoveryMock(opts, "")
 
 	actual := Flow{}.Deploy(opts, mockObj)
 
-	assert.Error(t, actual)
+	s.Error(actual)
+}
+
+func (s FlowTestSuite) Test_DeployInvokesCreateFlowFileOnlyOnce() {
+	opts := Opts{}
+	mockObj := getDockerComposeMock(opts, "")
+	serviceDiscovery = getServiceDiscoveryMock(opts, "")
+
+	Flow{}.Deploy(opts, mockObj)
+
+	mockObj.AssertNumberOfCalls(s.T(), "CreateFlowFile", 1)
+}
+
+func (s FlowTestSuite) Test_DeployInvokesRemoveFlowFileOnlyOnce() {
+	opts := Opts{}
+	mockObj := getDockerComposeMock(opts, "")
+	serviceDiscovery = getServiceDiscoveryMock(opts, "")
+
+	Flow{}.Deploy(opts, mockObj)
+
+	mockObj.AssertNumberOfCalls(s.T(), "CreateFlowFile", 1)
 }
 
 // Deploy > PutScale
 
-func Test_DeployInvokesPutScale(t *testing.T) {
+func (s FlowTestSuite) Test_DeployInvokesPutScale() {
 	opts := Opts{
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
 		ServiceName: "myService",
@@ -243,7 +281,7 @@ func Test_DeployInvokesPutScale(t *testing.T) {
 
 	Flow{}.Deploy(opts, mockObj)
 
-	scMockObj.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
+	scMockObj.AssertCalled(s.T(), "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 }
 
 // Deploy > RemoveFlow
@@ -273,7 +311,7 @@ func (s FlowTestSuite) Test_Scale_InvokesDockerComposeCreateFlowFile() {
 	mockObj := getDockerComposeMock(s.opts, "")
 	s.dc = mockObj
 
-	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget, true)
 
 	mockObj.AssertCalled(
 		s.T(),
@@ -296,7 +334,7 @@ func (s MainTestSuite) Test_Scale_ReturnsError_WhenDeployAndDockerComposeCreateF
 	).Return(fmt.Errorf("This is an error"))
 	s.dc = mockObj
 
-	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget, true)
 
 	s.Error(err)
 }
@@ -304,21 +342,21 @@ func (s MainTestSuite) Test_Scale_ReturnsError_WhenDeployAndDockerComposeCreateF
 
 // Scale > GetScaleCalc
 
-func Test_ScaleReturnsError_WhenGetScaleCalcFails(t *testing.T) {
+func (s FlowTestSuite) Test_ScaleReturnsError_WhenGetScaleCalcFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "")
 	scMockObj := getServiceDiscoveryMock(opts, "GetScaleCalc")
 	serviceDiscovery = scMockObj
 	scMockObj.On("GetScaleCalc", mock.Anything, mock.Anything, mock.Anything).Return(0, fmt.Errorf("This is an error"))
 
-	actual := Flow{}.Scale(opts, mockObj, "myTarget")
+	actual := Flow{}.Scale(opts, mockObj, "myTarget", true)
 
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
 // Scale > ScaleTargets
 
-func Test_ScaleInvokesScaleTargets(t *testing.T) {
+func (s FlowTestSuite) Test_ScaleInvokesScaleTargets() {
 	opts := Opts{
 		Host: "myHost",
 		Project: "myProject",
@@ -332,25 +370,32 @@ func Test_ScaleInvokesScaleTargets(t *testing.T) {
 	target := "myTarget"
 	scale, _ := serviceDiscovery.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
 
-	flow.Scale(opts, mockObj, target)
+	flow.Scale(opts, mockObj, target, true)
 
-	mockObj.AssertCalled(t, "ScaleTargets", opts.Host, opts.Project, target, scale)
+	mockObj.AssertCalled(s.T(), "ScaleTargets", opts.Host, opts.CertPath, opts.Project, target, scale)
 }
 
-func Test_ScaleReturnsError_WhenScaleTargetsFails(t *testing.T) {
+func (s FlowTestSuite) Test_ScaleReturnsError_WhenScaleTargetsFails() {
 	opts := Opts{}
 	mockObj := getDockerComposeMock(opts, "ScaleTargets")
-	mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On(
+		"ScaleTargets",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
 	serviceDiscovery = getServiceDiscoveryMock(opts, "")
 
-	actual := Flow{}.Scale(opts, mockObj, "myTarget")
+	actual := Flow{}.Scale(opts, mockObj, "myTarget", true)
 
-	assert.Error(t, actual)
+	s.Error(actual)
 }
 
 // Scale > PutScale
 
-func Test_ScaleInvokesPutScale(t *testing.T) {
+func (s FlowTestSuite) Test_ScaleInvokesPutScale() {
 	opts := Opts{
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
 		ServiceName: "myService",
@@ -361,9 +406,9 @@ func Test_ScaleInvokesPutScale(t *testing.T) {
 	serviceDiscovery = scMockObj
 	scale, _ := scMockObj.GetScaleCalc(opts.ServiceDiscoveryAddress, opts.ServiceName, opts.Scale)
 
-	Flow{}.Scale(opts, mockObj, "myTarget")
+	Flow{}.Scale(opts, mockObj, "myTarget", true)
 
-	scMockObj.AssertCalled(t, "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
+	scMockObj.AssertCalled(s.T(), "PutScale", opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
 }
 
 // Deploy > RemoveFlow
@@ -372,7 +417,7 @@ func (s FlowTestSuite) Test_Scale_InvokesDockerComposeRemoveFlow() {
 	mockObj := getDockerComposeMock(s.opts, "")
 	s.dc = mockObj
 
-	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+	Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget, true)
 
 	mockObj.AssertCalled(s.T(), "RemoveFlow")
 }
@@ -382,14 +427,14 @@ func (s FlowTestSuite) Test_Scale_ReturnsError_WhenDockerComposeRemoveFlowFails(
 	mockObj.On("RemoveFlow",).Return(fmt.Errorf("This is an error"))
 	s.dc = mockObj
 
-	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget)
+	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget, true)
 
 	s.Error(err)
 }
 
 // GetTargets
 
-func Test_GetTargetsReturnsAllTargets(t *testing.T) {
+func (s FlowTestSuite) Test_GetTargetsReturnsAllTargets() {
 	opts := Opts{
 		NextTarget: "myNextTarget",
 		SideTargets: []string{"sideTarget1", "sideTarget2"},
@@ -399,24 +444,10 @@ func Test_GetTargetsReturnsAllTargets(t *testing.T) {
 
 	actual := Flow{}.GetTargets(opts)
 
-	assert.Equal(t, expected, actual)
+	s.Equal(expected, actual)
 }
 
-func Test_GetTargetsExcludesNextTarget_WhenSkipPullTarget(t *testing.T) {
-	opts := Opts{
-		NextTarget: "myNextTarget",
-		SideTargets: []string{"sideTarget1", "sideTarget2"},
-		SkipPullTarget: true,
-		PullSideTargets: true,
-	}
-	expected := opts.SideTargets
-
-	actual := Flow{}.GetTargets(opts)
-
-	assert.Equal(t, expected, actual)
-}
-
-func Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets(t *testing.T) {
+func (s FlowTestSuite) Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets() {
 	opts := Opts{
 		NextTarget: "myNextTarget",
 		SideTargets: []string{"sideTarget1", "sideTarget2"},
@@ -426,37 +457,86 @@ func Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets(t *testing.T) {
 
 	actual := Flow{}.GetTargets(opts)
 
-	assert.Equal(t, expected, actual)
+	s.Equal(expected, actual)
 }
 
 // Proxy
 
-func Test_Proxy_InvokesProvision(t *testing.T) {
-	opts := Opts{
-		ProxyDockerHost: "myProxyDockerHost",
-		ProxyDockerCertPath: "myProxyCertPath",
-		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
-	}
+func (s FlowTestSuite) Test_Proxy_InvokesProvision() {
 	mockObj := getProxyMock("")
 
-	Flow{}.Proxy(opts, mockObj)
+	Flow{}.Proxy(s.opts, mockObj)
 
-	mockObj.AssertCalled(t, "Provision", opts.ProxyDockerHost, opts.ProxyDockerCertPath, opts.ServiceDiscoveryAddress)
+	mockObj.AssertCalled(
+		s.T(),
+		"Provision",
+		s.opts.ProxyDockerHost,
+		s.opts.ProxyDockerCertPath,
+		s.opts.ServiceDiscoveryAddress,
+	)
 }
 
-func Test_Proxy_ReturnsError_WhenFailure(t *testing.T) {
+func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenProvisionFails() {
 	opts := Opts{}
 	mockObj := getProxyMock("Provision")
 	mockObj.On("Provision", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
 
 	actual := Flow{}.Proxy(opts, mockObj)
 
-	assert.Error(t, actual)
+	s.Error(actual)
+}
+
+func (s FlowTestSuite) Test_Proxy_InvokesReconfigure() {
+	mockObj := getProxyMock("")
+	s.opts.Flow = []string{FLOW_DEPLOY}
+
+	Flow{}.Proxy(s.opts, mockObj)
+
+	mockObj.AssertCalled(
+		s.T(),
+		"Reconfigure",
+		s.opts.ProxyHost,
+		s.opts.ProxyReconfPort,
+		s.opts.ServiceName,
+		s.opts.ServicePath,
+	)
+}
+
+func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenReconfigureFails() {
+	s.opts.Flow = []string{FLOW_DEPLOY}
+	mockObj := getProxyMock("Reconfigure")
+	mockObj.On("Reconfigure", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+
+	actual := Flow{}.Proxy(s.opts, mockObj)
+
+	s.Error(actual)
+}
+
+func (s FlowTestSuite) Test_Proxy_DoesNotInvokeReconfigure_WhenFlowIsNotDeploy() {
+	mockObj := getProxyMock("")
+	s.opts.Flow = []string{}
+
+	Flow{}.Proxy(s.opts, mockObj)
+
+	mockObj.AssertNotCalled(
+		s.T(),
+		"Reconfigure",
+		s.opts.ProxyHost,
+		s.opts.ProxyReconfPort,
+		s.opts.ServiceName,
+		s.opts.ServicePath,
+	)
 }
 
 // Suite
 
 func TestFlowTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
 	suite.Run(t, new(FlowTestSuite))
 }
 
@@ -476,8 +556,8 @@ func (m *FlowMock) GetTargets(opts Opts) []string {
 	return []string{}
 }
 
-func (m *FlowMock) Scale(opts Opts, dc DockerComposable, target string) error {
-	args := m.Called(opts, dc, target)
+func (m *FlowMock) Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error {
+	args := m.Called(opts, dc, target, createFlowFile)
 	return args.Error(0)
 }
 
@@ -495,7 +575,7 @@ func getFlowMock(skipMethod string) *FlowMock {
 		mockObj.On("GetTargets", mock.Anything).Return(nil)
 	}
 	if skipMethod != "Scale" {
-		mockObj.On("Scale", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On("Scale", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "Proxy" {
 		mockObj.On("Proxy", mock.Anything, mock.Anything).Return(nil)

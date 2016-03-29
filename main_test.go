@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/stretchr/testify/mock"
 	"fmt"
+	"os"
 )
 
 type MainTestSuite struct {
@@ -142,6 +143,7 @@ func (s MainTestSuite) Test_Main_InvokesFlowScale_WhenScaleAndNotDeploy() {
 		s.opts,
 		s.dc,
 		s.opts.CurrentTarget,
+		true,
 	)
 }
 
@@ -149,6 +151,7 @@ func (s MainTestSuite) Test_Main_LogsFatal_WhenScaleAndNotDeployAndScaleFails() 
 	mockObj := getFlowMock("Scale")
 	mockObj.On(
 		"Scale",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -251,6 +254,7 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeStopTargetWithCurrentTarget
 		s.T(),
 		"StopTargets",
 		s.opts.Host,
+		s.opts.CertPath,
 		s.opts.Project,
 		[]string{s.opts.CurrentTarget},
 	)
@@ -270,6 +274,7 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeStopTargetWithNextColor_Whe
 		s.T(),
 		"StopTargets",
 		s.opts.Host,
+		s.opts.CertPath,
 		s.opts.Project,
 		[]string{s.opts.NextTarget},
 	)
@@ -279,6 +284,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeStop
 	mockObj := getDockerComposeMock(s.opts, "StopTargets")
 	mockObj.On(
 		"StopTargets",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -394,6 +400,12 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenFlawProxyFails() {
 // Suite
 
 func TestMainTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
 	getOptsOrig := GetOpts
 	defer func() {
 		GetOpts = getOptsOrig

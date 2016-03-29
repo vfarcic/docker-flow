@@ -49,12 +49,12 @@ func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
 	return nil
 }
 
-func (m HaProxy) Reconfigure(domain, reconfPort, project, servicePath string) error {
-	if len(domain) == 0 {
+func (m HaProxy) Reconfigure(host, reconfPort, serviceName string, servicePath []string) error {
+	if len(host) == 0 {
 		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
 	}
-	if len(project) == 0 {
-		return fmt.Errorf("Project is mandatory for the proxy step.")
+	if len(serviceName) == 0 {
+		return fmt.Errorf("Service name is mandatory for the proxy step.")
 	}
 	if len(servicePath) == 0 {
 		return fmt.Errorf("Service path is mandatory.")
@@ -63,22 +63,22 @@ func (m HaProxy) Reconfigure(domain, reconfPort, project, servicePath string) er
 		return fmt.Errorf("Reconfigure port is mandatory.")
 	}
 	var address string
-	if strings.Contains(domain, ":") { // For testing purposes only
-		address = domain
+	if strings.Contains(host, ":") { // For testing purposes only
+		address = host
 	} else {
-		address = fmt.Sprintf("%s:%s", domain, reconfPort)
+		address = fmt.Sprintf("%s:%s", host, reconfPort)
 	}
 	resp, err := httpGet(fmt.Sprintf(
 		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
 		address,
-		project,
-		servicePath,
+		serviceName,
+		strings.Join(servicePath, ","),
 	))
 	if err != nil {
 		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
+	if resp.StatusCode != 200 {
 		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
 	}
 	return nil

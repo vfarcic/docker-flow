@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"github.com/stretchr/testify/suite"
 	"strconv"
+	"os"
 )
 
 type ConsulTestSuite struct {
@@ -149,5 +150,11 @@ func (suite ConsulTestSuite) Test_GetColorCalc_ReturnsErrorFromHttpPut() {
 }
 
 func TestConsulTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
 	suite.Run(t, new(ConsulTestSuite))
 }

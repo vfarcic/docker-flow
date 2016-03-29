@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/http"
+	"strings"
+	"os"
 )
 
 type HaProxyTestSuite struct {
@@ -17,7 +19,7 @@ type HaProxyTestSuite struct {
 	ExitedMessage 	string
 	ProxyHost		string
 	Project		 	string
-	ServicePath		string
+	ServicePath		[]string
 	ReconfPort		string
 	Server          *httptest.Server
 }
@@ -27,14 +29,14 @@ func (s *HaProxyTestSuite) SetupTest() {
 	s.Host = "tcp://my-docker-proxy-host"
 	s.ProxyHost = "my-docker-proxy-host.com"
 	s.Project = "myProject"
-	s.ServicePath = "/path/to/my/service"
+	s.ServicePath = []string{"/path/to/my/service", "/path/to/my/other/service"}
 	s.ExitedMessage = "Exited (2) 15 seconds ago"
 	s.ReconfPort = "5362"
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reconfigureUrl := fmt.Sprintf(
 			"/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
 			s.Project,
-			s.ServicePath,
+			strings.Join(s.ServicePath, ","),
 		)
 		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
 		if (r.Method == "GET") {
@@ -229,7 +231,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProjectIsEmpty() {
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "")
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, []string{""})
 
 	s.Error(err)
 }
@@ -247,7 +249,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 		s.ProxyHost,
 		s.ReconfPort,
 		s.Project,
-		s.ServicePath,
+		strings.Join(s.ServicePath, ","),
 	)
 	httpGetOrig := httpGet
 	defer func() { httpGet = httpGetOrig }()
@@ -286,5 +288,11 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenResponseCodeIsNot2xx
 // Suite
 
 func TestHaProxyTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
 	suite.Run(t, new(HaProxyTestSuite))
 }

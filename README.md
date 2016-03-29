@@ -27,7 +27,6 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |-b, --blue-green        |FLOW_BLUE_GREEN            |blue_green            |Perform blue-green deployment. (**bool**)|
 |-t, --target            |FLOW_TARGET                |target                |Docker Compose target. (**required**)|
 |-T, --side-target       |FLOW_SIDE_TARGETS          |side_targets          |Side or auxiliary Docker Compose targets. (**multi**)|
-|-P, --skip-pull-targets |FLOW_SKIP_PULL_TARGET      |skip_pull_target      |Skip pulling targets. (**bool**)|
 |-S, --pull-side-targets |FLOW_PULL_SIDE_TARGETS     |pull_side_targets     |Pull side or auxiliary targets. (**bool**)|
 |-p, --project           |FLOW_PROJECT               |project               |Docker Compose project. If not specified, the current directory will be used instead.|
 |-c, --consul-address    |FLOW_CONSUL_ADDRESS        |consul_address        |The address of the Consul server. (**required**)|

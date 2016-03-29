@@ -37,10 +37,6 @@ func (s *OptsTestSuite) SetupTest() {
 	}
 }
 
-func TestOptsTestSuite(t *testing.T) {
-	suite.Run(t, new(OptsTestSuite))
-}
-
 // processOpts
 
 func (s OptsTestSuite) Test_ProcessOpts_ReturnsNil() {
@@ -177,13 +173,43 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsCurrentTargetToTargetAndCurrentColor
 }
 
 func (s OptsTestSuite) Test_ProcessOpts_SetsHostFromDockerHostEnv_WhenEmpty() {
+	expected := "tcp://5.5.5.5:4444"
 	s.opts.Host = ""
-	expected := "tcp://5.5.5.5.:4444"
 	os.Setenv("DOCKER_HOST", expected)
 
 	ProcessOpts(&s.opts)
 
 	s.Equal(expected, s.opts.Host)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_DoesNotSetHostFromDockerHostEnv_WhenNotEmpty() {
+	expected := "tcp://5.5.5.5:4444"
+	s.opts.Host = expected
+	os.Setenv("DOCKER_HOST", "myHost")
+
+	ProcessOpts(&s.opts)
+
+	s.Equal(expected, s.opts.Host)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_SetsCertPathFromDockerCertPathEnv_WhenEmpty() {
+	expected := "/path/to/docker/cert"
+	s.opts.Host = ""
+	os.Setenv("DOCKER_CERT_PATH", expected)
+
+	ProcessOpts(&s.opts)
+
+	s.Equal(expected, s.opts.CertPath)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_DoesNotSetCertPathFromDockerCertPathEnv_WhenEmpty() {
+	expected := "/path/to/docker/cert"
+	s.opts.CertPath = expected
+	os.Setenv("DOCKER_CERT_PATH", "/my/cert/path")
+
+	ProcessOpts(&s.opts)
+
+	s.Equal(expected, s.opts.CertPath)
 }
 
 func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
@@ -202,6 +228,7 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		value		*string
 	}{
 		{"myHost", 				"FLOW_HOST", 					&s.opts.Host},
+		{"myCertPath", 			"FLOW_CERT_PATH", 				&s.opts.CertPath},
 		{"myComposePath", 		"FLOW_COMPOSE_PATH", 			&s.opts.ComposePath},
 		{"myTarget", 			"FLOW_TARGET", 					&s.opts.Target},
 		{"myProject", 			"FLOW_PROJECT", 				&s.opts.Project},
@@ -227,7 +254,6 @@ func (s OptsTestSuite) Test_ParseEnvVars_Bools() {
 		value		*bool
 	}{
 		{"FLOW_BLUE_GREEN", 		&s.opts.BlueGreen},
-		{"FLOW_SKIP_PULL_TARGET", 	&s.opts.SkipPullTarget},
 		{"FLOW_PULL_SIDE_TARGETS", 	&s.opts.PullSideTargets},
 	}
 	for _, d := range data {
@@ -285,13 +311,14 @@ func (s OptsTestSuite) Test_ParseEnvVars_ReturnsError_WhenFailure() {
 
 // ParseArgs
 
-func (s OptsTestSuite) TestParseArgs_LongStrings() {
+func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
 	data := []struct{
 		expected	string
 		key 		string
 		value		*string
 	}{
 		{"hostFromArgs", 			"host", 					&s.opts.Host},
+		{"certPathFromArgs", 		"cert-path", 				&s.opts.CertPath},
 		{"composePathFromArgs",		"compose-path", 			&s.opts.ComposePath},
 		{"targetFromArgs", 			"target", 					&s.opts.Target},
 		{"projectFromArgs", 		"project", 					&s.opts.Project},
@@ -306,6 +333,30 @@ func (s OptsTestSuite) TestParseArgs_LongStrings() {
 	for _, d := range data {
 		os.Args = []string{"myProgram", fmt.Sprintf("--%s=%s", d.key, d.expected)}
 		ParseArgs(&s.opts)
+		s.Equal(d.expected, *d.value)
+	}
+}
+
+func (s OptsTestSuite) Test_ParseArgs_ParsesLongSlices() {
+	os.Args = []string{"myProgram"}
+	data := []struct{
+		expected	[]string
+		key 		string
+		value		*[]string
+	}{
+		{[]string{"path1", "path2"}, "service-path", &s.opts.ServicePath},
+	}
+
+	for _, d := range data {
+		for _, v := range d.expected {
+			os.Args = append(os.Args, fmt.Sprintf("--%s", d.key), v)
+		}
+
+	}
+
+	ParseArgs(&s.opts)
+
+	for _, d := range data {
 		s.Equal(d.expected, *d.value)
 	}
 }
@@ -337,7 +388,6 @@ func (s OptsTestSuite) TestParseArgs_LongBools() {
 		value		*bool
 	}{
 		{"blue-green", &s.opts.BlueGreen},
-		{"skip-pull-targets", &s.opts.SkipPullTarget},
 		{"pull-side-targets", &s.opts.PullSideTargets},
 	}
 
@@ -354,7 +404,6 @@ func (s OptsTestSuite) TestParseArgs_ShortBools() {
 		value		*bool
 	}{
 		{"b", &s.opts.BlueGreen},
-		{"P", &s.opts.SkipPullTarget},
 		{"S", &s.opts.PullSideTargets},
 	}
 
@@ -443,6 +492,7 @@ func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenUnmarshalFails() {
 
 func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	host := "hostFromYml"
+	certPath := "certPathFromYml"
 	composePath := "composePathFromYml"
 	target := "targetFromYml"
 	sideTarget1 := "sideTarget1FromYml"
@@ -458,6 +508,7 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	proxyReconfPort := "1245"
 	yml := fmt.Sprintf(`
 host: %s
+cert_path: %s
 compose_path: %s
 blue_green: true
 target: %s
@@ -477,7 +528,7 @@ flow:
   - %s
   - %s
 `,
-		host, composePath, target, sideTarget1, sideTarget2,
+		host, certPath, composePath, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
 		proxyDockerCertPath, proxyReconfPort, flow1, flow2,
 	)
@@ -492,7 +543,6 @@ flow:
 	s.True(s.opts.BlueGreen)
 	s.Equal(target, s.opts.Target)
 	s.Equal([]string{sideTarget1, sideTarget2}, s.opts.SideTargets)
-	s.True(s.opts.SkipPullTarget)
 	s.True(s.opts.PullSideTargets)
 	s.Equal(project, s.opts.Project)
 	s.Equal(consulAddress, s.opts.ServiceDiscoveryAddress)
@@ -629,3 +679,16 @@ func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenProcessOptsFails() {
 	s.Error(actual)
 	processOpts = restore
 }
+
+// Suite
+
+func TestOptsTestSuite(t *testing.T) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	defer func() {
+		os.Setenv("DOCKER_HOST", dockerHost)
+		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)
+	}()
+	suite.Run(t, new(OptsTestSuite))
+}
+

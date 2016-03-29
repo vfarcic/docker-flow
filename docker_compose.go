@@ -16,11 +16,11 @@ var getDockerCompose = func() DockerComposable {
 type DockerComposable interface {
 	CreateFlowFile(dcPath, target, color string, blueGreen bool) error
 	RemoveFlow() error
-	PullTargets(host, project string, targets []string) error
-	UpTargets(host, project string, targets []string) error
-	ScaleTargets(host, project, target string, scale int) error
-	RmTargets(host, project string, targets []string) error
-	StopTargets(host, project string, targets []string) error
+	PullTargets(host, certPath, project string, targets []string) error
+	UpTargets(host, certPath, project string, targets []string) error
+	ScaleTargets(host, certPath, project, target string, scale int) error
+	RmTargets(host, certPath, project string, targets []string) error
+	StopTargets(host, certPath, project string, targets []string) error
 }
 
 type DockerCompose struct{}
@@ -50,57 +50,57 @@ func (dc DockerCompose) RemoveFlow() error {
 	return nil
 }
 
-func (dc DockerCompose) PullTargets(host, project string, targets []string) error {
+func (dc DockerCompose) PullTargets(host, certPath, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
 	args := append([]string{"pull"}, targets...)
-	return dc.runCmd(host, project, args)
+	return dc.runCmd(host, certPath, project, args)
 }
 
-func (dc DockerCompose) UpTargets(host, project string, targets []string) error {
+func (dc DockerCompose) UpTargets(host, certPath, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
 	args := append([]string{"up", "-d"}, targets...)
-	return dc.runCmd(host, project, args)
+	return dc.runCmd(host, certPath, project, args)
 }
 
-func (dc DockerCompose) ScaleTargets(host, project, target string, scale int) error {
+func (dc DockerCompose) ScaleTargets(host, certPath, project, target string, scale int) error {
 	if len(target) == 0 {
 		return nil
 	}
 	args := []string{"scale", fmt.Sprintf("%s=%d", target, scale)}
-	return dc.runCmd(host, project, args)
+	return dc.runCmd(host, certPath, project, args)
 }
 
-func (dc DockerCompose) RmTargets(host, project string, targets []string) error {
+func (dc DockerCompose) RmTargets(host, certPath, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
 	args := append([]string{"rm", "-f"}, targets...)
-	return dc.runCmd(host, project, args)
+	return dc.runCmd(host, certPath, project, args)
 }
 
-func (dc DockerCompose) StopTargets(host, project string, targets []string) error {
+func (dc DockerCompose) StopTargets(host, certPath, project string, targets []string) error {
 	if len(targets) == 0 {
 		return nil
 	}
 	args := append([]string{"stop"}, targets...)
-	return dc.runCmd(host, project, args)
+	return dc.runCmd(host, certPath, project, args)
 }
 
-func (dc DockerCompose) getArgs(host, project string) []string {
+func (dc DockerCompose) getArgs(host, certPath, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
-	SetDockerHost(host, "")
+	SetDockerHost(host, certPath)
 	if (len(project) > 0) {
 		args = append(args, "-p", project)
 	}
 	return args
 }
 
-func (dc DockerCompose) runCmd(host, project string, args []string) error {
-	args = append(dc.getArgs(host, project), args...)
+func (dc DockerCompose) runCmd(host, certPath, project string, args []string) error {
+	args = append(dc.getArgs(host, certPath, project), args...)
 	cmd := execCmd("docker-compose", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
