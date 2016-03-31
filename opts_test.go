@@ -273,6 +273,7 @@ func (s OptsTestSuite) Test_ParseEnvVars_Slices() {
 	}{
 		{"myTarget1,myTarget2", "FLOW_SIDE_TARGETS", &s.opts.SideTargets},
 		{"deploy,stop-old", "FLOW", &s.opts.Flow},
+		{"path1,path2", "FLOW_SERVICE_PATH", &s.opts.ServicePath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -502,6 +503,8 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	scale := "scaleFromYml"
 	flow1 := "deploy"
 	flow2 := "stop-old"
+	path1 := "path1"
+	path2 := "path2"
 	proxyHost := "proxyHostFromYml"
 	proxyDockerHost := "proxyDomainFromYml"
 	proxyDockerCertPath := "proxyCertPathFromYml"
@@ -527,10 +530,14 @@ proxy_reconf_port: %s
 flow:
   - %s
   - %s
+service_path:
+  - %s
+  - %s
 `,
 		host, certPath, composePath, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
-		proxyDockerCertPath, proxyReconfPort, flow1, flow2,
+		proxyDockerCertPath, proxyReconfPort, flow1, flow2, path1,
+		path2,
 	)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
@@ -552,6 +559,7 @@ flow:
 	s.Equal(proxyDockerCertPath, s.opts.ProxyDockerCertPath)
 	s.Equal(proxyReconfPort, s.opts.ProxyReconfPort)
 	s.Equal([]string{flow1, flow2}, s.opts.Flow)
+	s.Equal([]string{path1, path2}, s.opts.ServicePath)
 }
 
 // GetOpts

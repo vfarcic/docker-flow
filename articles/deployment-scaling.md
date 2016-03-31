@@ -222,9 +222,7 @@ Just like with Docker Compose, *Docker Flow* allows you to scale a service to a 
 Let's scale our service to two instances.
 
 ```bash
-./docker-flow \
-    --flow=deploy \
-    --scale=2
+./docker-flow --flow=deploy --scale=2
 
 docker ps \
     --format "table{{.Image}}\t{{.Status}}\t{{.Names}}"
@@ -245,9 +243,7 @@ progrium/consul           Up 5 hours          consul
 As expected, two instances of the new release (*blue*) were deployed. This behavior is the same as what Docker Compose offers (except the addition of blue-green deployment). What *Docker Flow* allows us is to prepend the *scale* value with plus (*+*) or minus (*-*) signs. Let's see it in action before discussing the benefits.
 
 ```bash
-./docker-flow \
-    --flow=deploy \
-    --scale=+2
+./docker-flow --flow=deploy --scale=+2
 
 docker ps \
     --format "table{{.Image}}\t{{.Status}}\t{{.Names}}"

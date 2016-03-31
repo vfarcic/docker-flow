@@ -25,7 +25,7 @@ type Opts struct {
 	ComposePath 			string 		`short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file." yaml:"compose_path" envconfig:"compose_path"`
 	BlueGreen   			bool 		`short:"b" long:"blue-green" description:"Perform blue-green deployment." yaml:"blue_green" envconfig:"blue_green"`
 	Target					string 		`short:"t" long:"target" description:"Docker Compose target."`
-	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets" envconfig:"side_targets"`
+	SideTargets             []string 	`short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets"`
 	PullSideTargets         bool		`short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
 	Project                 string 		`short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ServiceDiscoveryAddress string 		`short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
@@ -35,7 +35,7 @@ type Opts struct {
 	ProxyDockerHost			string		`long:"proxy-docker-host" description:"Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used." yaml:"proxy_docker_host" envconfig:"proxy_docker_host"`
 	ProxyDockerCertPath     string 		`long:"proxy-docker-cert-path" description:"Docker certification path for the proxy host." yaml:"proxy_docker_cert_path" envconfig:"proxy_docker_cert_path"`
 	ProxyReconfPort			string		`long:"proxy-reconf-port" description:"The port used by the proxy to reconfigure its configuration" yaml:"proxy_reconf_port" envconfig:"proxy_reconf_port"`
-	ServicePath 			[]string	`long:"service-path" description:"Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used."`
+	ServicePath 			[]string	`long:"service-path" description:"Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used." yaml:"service_path"`
 	ServiceName             string
 	CurrentColor    		string
 	NextColor       		string
@@ -92,6 +92,7 @@ func ParseEnvVars(opts *Opts) error {
 	}{
 		{"FLOW_SIDE_TARGETS", &opts.SideTargets},
 		{"FLOW", &opts.Flow},
+		{"FLOW_SERVICE_PATH", &opts.ServicePath},
 	}
 	for _, d := range data {
 		value := strings.Trim(os.Getenv(d.key), " ")

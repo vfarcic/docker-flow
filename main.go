@@ -46,7 +46,8 @@ func main() {
 			// TODO: End Move to flow
 		case FLOW_SCALE:
 			if !deployed {
-				logPrintln("Scaling...")
+				logPrintln(fmt.Sprintf("Scaling (%s)...", opts.CurrentTarget))
+				fmt.Println(opts.Flow)
 				if err := flow.Scale(opts, dc, opts.CurrentTarget, true); err != nil {
 					logFatal(err)
 				}
