@@ -20,6 +20,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 ### Command line arguments
 
 |Command argument                     |Description|
+|-------------------------------------|-----------|
 |-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
 |    --cert-path=                     |Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead.|
 |-f, --compose-path=docker-compose.yml|Path to the Docker Compose configuration file. (default: docker-compose.yml)|
@@ -46,6 +47,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 ### Mappings from command line arguments to YML and environment variables
 
 |Command argument                     |YML                   |Environment variable       |
+|-------------------------------------|----------------------|---------------------------|
 |-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
 |    --cert-path=                     |cert_path             |FLOW_CERT_PATH             |
 |-f, --compose-path=docker-compose.yml|compose_path          |FLOW_COMPOSE_PATH          |
