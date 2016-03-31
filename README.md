@@ -31,12 +31,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
 |-c, --consul-address=                |The address of the Consul server.|
 |-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
-|-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.
-                                       <br>**deploy**: Deploys a new release
-                                       <br>**scale**: Scales currently running release
-                                       <br>**stop-old**: Stops the old release
-                                       <br>**proxy**: Reconfigures the proxy
-                                       <br>(default: [deploy]) (**multi**)|
+|-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(default: [deploy]) (**multi**)|
 |    --proxy-host=                    |The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used.|
 |    --proxy-docker-host=             |Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used.|
 |    --proxy-docker-cert-path=        |Docker certification path for the proxy host.|
