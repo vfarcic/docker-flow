@@ -19,22 +19,33 @@ docker run -d \
     -h "consul" \
     --name "consul" \
     progrium/consul -server -bootstrap
+
+export CONSUL_IP=$(docker-machine ip docker-flow)
+
+export PROXY_IP=$(docker-machine ip docker-flow)
+
+export DOCKER_IP=$(docker-machine ip docker-flow)
+
+export CONSUL_IP=$(docker-machine ip docker-flow)
+
+docker run -d \
+    --name registrator \
+    -v /var/run/docker.sock:/tmp/docker.sock \
+    gliderlabs/registrator -ip $DOCKER_IP consul://$CONSUL_IP:8500
 ```
 
 Provisioning
 ============
 
 ```bash
-# The first time
-
-export CONSUL_IP=$(docker-machine ip docker-flow)
-
 export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
+
+# The first time
 
 docker ps -a --filter name=docker-flow-proxy
 
 ./docker-flow \
-    --proxy-host $DOCKER_HOST \
+    --proxy-host $PROXY_IP \
     --proxy-docker-host $DOCKER_HOST \
     --proxy-docker-cert-path $DOCKER_CERT_PATH \
     --flow proxy
@@ -47,7 +58,7 @@ docker stop docker-flow-proxy
 
 docker ps -a --filter name=docker-flow-proxy
 
-export FLOW_PROXY_HOST=$(docker-machine ip docker-flow)
+export FLOW_PROXY_HOST=$PROXY_IP
 
 export FLOW_PROXY_DOCKER_HOST=$DOCKER_HOST
 
@@ -72,7 +83,9 @@ Reconfiguring Proxy After Deployment
 ====================================
 
 ```bash
-./docker-flow --flow deploy --flow proxy
+./docker-flow \
+    --service-path "/api/v1/books" \
+    --flow deploy --flow proxy
 
 ./docker-flow --scale +1 --flow scale
 

@@ -72,23 +72,3 @@ Examples
 --------
 
 Examples can be found in the [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) article.
-
-TODO
-----
-
-### Features
-
-- [ ] Provisioning
-- [ ] Pre-deployment testing
-- [ ] Building & pushing
-- [x] Deployment
-- [x] Scaling
-- [ ] Pre-integration testing
-- [ ] Proxy
-- [ ] Post-integration testing
-- [x] Stopping old release
-
-### Tasks
-
-- [x] Move unit tests to CI
-- [ ] Move integration tests to CI

@@ -19,20 +19,25 @@ import (
 	"bytes"
 	"os"
 	"time"
+	"net/http"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ConsulIp	string
+	ConsulIp			string
+	ProxyHost			string
+	ProxyDockerHost 	string
+	ProxyDockerCertPath string
+	ServicePath			string
 }
 
 func (s *IntegrationTestSuite) SetupTest() {
 	_, ids := s.runCmdWithoutStdOut(true, "docker", "ps", "-a", "--filter", "name=booksms", "--format", "{{.ID}}")
 	for _, id := range strings.Split(ids, "\n") {
-		s.runCmdWithoutStdOut(false, "docker", "rm", "-f", string(id))
+		s.runCmdWithStdOut(false, "docker", "rm", "-f", string(id))
 	}
-	s.runCmdWithoutStdOut(false, "docker", "rm", "-f", "consul")
-	s.runCmdWithoutStdOut(
+	s.runCmdWithStdOut(false, "docker", "rm", "-f", "consul", "docker-flow-proxy")
+	s.runCmdWithStdOut(
 		true,
 		"docker", "run", "-d", "--name", "consul",
 		"-p", "8500:8500",
@@ -133,6 +138,59 @@ func (s IntegrationTestSuite) Test_Scaling() {
 	})
 }
 
+func (s IntegrationTestSuite) Test_Proxy() {
+	log.Println(">> Integration tests: proxy")
+
+	log.Println("Runs docker-flow-proxy when not present")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--proxy-host", s.ProxyHost,
+		"--proxy-docker-host", s.ProxyDockerHost,
+		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
+		"--flow", "proxy",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"docker-flow-proxy", "Up" },
+	})
+
+	log.Println("Runs docker-flow-proxy when stopped")
+	s.runCmdWithStdOut(false, "docker", "stop", "docker-flow-proxy")
+	s.verifyContainer([]ContainerStatus{
+		{"docker-flow-proxy", "Exited" },
+	})
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--proxy-host", s.ProxyHost,
+		"--proxy-docker-host", s.ProxyDockerHost,
+		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
+		"--flow", "proxy",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"docker-flow-proxy", "Up" },
+	})
+
+	log.Println("Reconfigures proxy when deploy")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--proxy-host", s.ProxyHost,
+		"--proxy-docker-host", s.ProxyDockerHost,
+		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
+		"--service-path", s.ServicePath,
+		"--flow", "deploy", "--flow", "proxy",
+	)
+	fmt.Println(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	log.Fatal("xxx")
+	resp, err := http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	s.NoError(err)
+	s.Equal(201, resp.StatusCode)
+}
+
 // Util
 type ContainerStatus struct {
 	Name	string
@@ -197,8 +255,13 @@ func (s IntegrationTestSuite) runCmdWithStdOut(failOnError bool, command string,
 func TestIntegrationTestSuite(t *testing.T) {
 	s := new(IntegrationTestSuite)
 	_, msg := s.runCmdWithoutStdOut(true, "docker-machine", "ip", "testing")
-	s.ConsulIp = strings.Trim(msg, "\n")
-	os.Setenv("CONSUL_IP", s.ConsulIp)
+	ip := strings.Trim(msg, "\n")
+	s.ConsulIp = ip
+	s.ProxyHost = ip
+	s.ProxyDockerHost = os.Getenv("DOCKER_HOST")
+	s.ProxyDockerCertPath = os.Getenv("DOCKER_CERT_PATH")
+	s.ServicePath = "/api/v1/books"
+	os.Setenv("FLOW_CONSUL_IP", s.ConsulIp)
 	os.Setenv("FLOW_PROJECT", "booksms")
 	suite.Run(t, s)
 }

@@ -62,11 +62,9 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName string, servicePath [
 	if len(reconfPort) == 0 {
 		return fmt.Errorf("Reconfigure port is mandatory.")
 	}
-	var address string
-	if strings.Contains(host, ":") { // For testing purposes only
-		address = host
-	} else {
-		address = fmt.Sprintf("%s:%s", host, reconfPort)
+	address := fmt.Sprintf("%s:%s", host, reconfPort)
+	if !strings.HasPrefix(strings.ToLower(address), "http") {
+		address = fmt.Sprintf("http://%s", address)
 	}
 	resp, err := httpGet(fmt.Sprintf(
 		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",

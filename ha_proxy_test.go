@@ -27,7 +27,7 @@ type HaProxyTestSuite struct {
 func (s *HaProxyTestSuite) SetupTest() {
 	s.ScAddress = "1.2.3.4:1234"
 	s.Host = "tcp://my-docker-proxy-host"
-	s.ProxyHost = "my-docker-proxy-host.com"
+	s.ProxyHost = "http://my-docker-proxy-host.com"
 	s.Project = "myProject"
 	s.ServicePath = []string{"/path/to/my/service", "/path/to/my/other/service"}
 	s.ExitedMessage = "Exited (2) 15 seconds ago"
@@ -259,6 +259,27 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 	}
 
 	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.ServicePath)
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithPrependedHttp() {
+	actual := ""
+	expected := fmt.Sprintf(
+		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
+		s.ProxyHost,
+		s.ReconfPort,
+		s.Project,
+		strings.Join(s.ServicePath, ","),
+	)
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		actual = url
+		return nil, fmt.Errorf("This is an error")
+	}
+
+	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, s.ServicePath)
 
 	s.Equal(expected, actual)
 }
