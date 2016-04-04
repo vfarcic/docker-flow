@@ -62,7 +62,14 @@ func main() {
 					color = opts.NextColor
 				}
 				logPrintln(fmt.Sprintf("Stopping old (%s)...", target))
-				if err := dc.CreateFlowFile(opts.ComposePath, opts.Target, color, opts.BlueGreen); err != nil {
+				if err := dc.CreateFlowFile(
+					opts.ComposePath,
+					opts.ServiceName,
+					opts.Target,
+					opts.SideTargets,
+					color,
+					opts.BlueGreen,
+				); err != nil {
 					logFatal(err)
 				}
 				if err := dc.StopTargets(opts.Host, opts.CertPath, opts.Project, []string{target}); err != nil {

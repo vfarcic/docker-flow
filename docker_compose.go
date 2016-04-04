@@ -14,7 +14,7 @@ var getDockerCompose = func() DockerComposable {
 }
 
 type DockerComposable interface {
-	CreateFlowFile(dcPath, target, color string, blueGreen bool) error
+	CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, certPath, project string, targets []string) error
 	UpTargets(host, certPath, project string, targets []string) error
@@ -25,18 +25,68 @@ type DockerComposable interface {
 
 type DockerCompose struct{}
 
-func (dc DockerCompose) CreateFlowFile(dcPath, target, color string, blueGreen bool) error {
+func (dc DockerCompose) CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error {
+	// TODO: Start remove
 	data, err := readFile(dcPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)
 	}
 	s := string(data)
+	// TODO: End remove
+	extendedTarget := target
 	if blueGreen {
+		// TODO: Start remove
 		old := fmt.Sprintf("%s:", target)
 		new := fmt.Sprintf("%s-%s:", target, color)
 		s = strings.Replace(string(data), old, new, 1)
+		// TODO: End remove
+		extendedTarget = fmt.Sprintf("%s-%s", target, color)
 	}
-	err = writeFile(dockerComposeFlowPath, []byte(s), 0644)
+	s = ""
+	dcData := strings.Trim(string(data), " ")
+	firstLine := strings.Split(dcData, "\n")[0]
+	indent := ""
+	dcTemplate := `
+%s%s:
+%s  extends:
+%s    file: %s
+%s    service: %s`
+	dcTemplateTarget := dcTemplate + `
+%s  environment:
+%s    - SERVICE_NAME=%s-%s`
+	if strings.Contains(strings.ToLower(firstLine), "version") && strings.Contains(firstLine, "2") {
+		indent = "  "
+		s = `version: '2'
+
+services:`
+	}
+	s += fmt.Sprintf(
+		dcTemplateTarget,
+		indent,
+		extendedTarget,
+		indent,
+		indent,
+		dcPath,
+		indent,
+		target,
+		indent,
+		indent,
+		serviceName,
+		color,
+	)
+	for _, sideTarget := range sideTargets {
+		s += fmt.Sprintf(
+			dcTemplate,
+			indent,
+			sideTarget,
+			indent,
+			indent,
+			dcPath,
+			indent,
+			sideTarget,
+		)
+	}
+	err = writeFile(dockerComposeFlowPath, []byte(strings.Trim(s, "\n")), 0644)
 	if err != nil {
 		return fmt.Errorf("Could not write the Docker Flow file %s\n%v", dockerComposeFlowPath, err)
 	}

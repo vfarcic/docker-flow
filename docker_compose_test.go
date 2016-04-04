@@ -11,18 +11,22 @@ import (
 
 type DockerComposeTestSuite struct {
 	suite.Suite
-	dockerComposePath string
-	target            string
-	color             string
-	blueGreen         bool
-	host 			  string
-	certPath		  string
-	project 		  string
+	dockerComposePath	string
+	serviceName 		string
+	target            	string
+	sideTargets			[]string
+	color             	string
+	blueGreen         	bool
+	host 			  	string
+	certPath		  	string
+	project 		  	string
 }
 
 func (s *DockerComposeTestSuite) SetupTest() {
 	s.dockerComposePath = "test-docker-compose.yml"
+	s.serviceName = "myService"
 	s.target = "my-target"
+	s.sideTargets = []string{"my-side-target-1", "my-side-target-2"}
 	s.color = "red"
 	s.blueGreen = false
 	s.host = "tcp://1.2.3.4:1234"
@@ -45,7 +49,7 @@ func (s *DockerComposeTestSuite) SetupTest() {
 // CreateFlow
 
 func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsNil() {
-	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
+	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
 
 	s.Nil(actual)
 }
@@ -55,7 +59,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenReadFile() 
 		return []byte(""), fmt.Errorf("Some error")
 	}
 
-	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -67,7 +71,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesTheFile() {
 		return nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
 
 	s.Equal(dockerComposeFlowPath, actual)
 }
@@ -79,29 +83,109 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesDockerComposeReplica(
 		return []byte(""), nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
 
 	s.Equal(s.dockerComposePath, actual)
 }
 
-func (s DockerComposeTestSuite) Test_CreateFlowFile_ReplacesTarget_WhenBlueGreen() {
+func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesNewTarget_WhenBlueGreen() {
 	color := "orange"
-	target := "app"
 	var actual string
-	var dcTemplate = `
-services:
-  %s%s:
-    image: vfarcic/books-ms`
-	var expected = fmt.Sprintf(dcTemplate, target, "-" + color)
+	var dcContent = fmt.Sprintf(`
+%s:
+  image: vfarcic/books-ms`,
+		s.target,
+	)
+	newTarget := fmt.Sprintf("%s-%s", s.target, color)
+	expected := fmt.Sprintf(`%s:
+  extends:
+    file: %s
+    service: %s
+  environment:
+    - SERVICE_NAME=%s-%s
+%s:
+  extends:
+    file: %s
+    service: %s
+%s:
+  extends:
+    file: %s
+    service: %s`,
+		newTarget,
+		s.dockerComposePath,
+		s.target,
+		s.serviceName,
+		color,
+		s.sideTargets[0],
+		s.dockerComposePath,
+		s.sideTargets[0],
+		s.sideTargets[1],
+		s.dockerComposePath,
+		s.sideTargets[1],
+	)
 	readFile = func(filename string) ([]byte, error) {
-		return []byte(fmt.Sprintf(dcTemplate, target, "")), nil
+		return []byte(dcContent), nil
 	}
 	writeFile = func(filename string, data []byte, perm os.FileMode) error {
 		actual = string(data)
 		return nil
 	}
 
-	DockerCompose{}.CreateFlowFile(s.dockerComposePath, target, color, true)
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, color, true)
+
+	s.Equal(expected, actual)
+}
+
+func (s DockerComposeTestSuite) Test_CreateFlowFile_UsesV2_WhenBlueGreen() {
+	color := "orange"
+	var actual string
+	newTarget := fmt.Sprintf("%s-%s", s.target, color)
+	var dcContent = fmt.Sprintf(`version: '2'
+
+services:
+  %s:
+    image: vfarcic/books-ms`,
+		s.target,
+	)
+	expected := fmt.Sprintf(`version: '2'
+
+services:
+  %s:
+    extends:
+      file: %s
+      service: %s
+    environment:
+      - SERVICE_NAME=%s-%s
+  %s:
+    extends:
+      file: %s
+      service: %s
+  %s:
+    extends:
+      file: %s
+      service: %s`,
+		newTarget,
+		s.dockerComposePath,
+		s.target,
+		s.serviceName,
+		color,
+		s.sideTargets[0],
+		s.dockerComposePath,
+		s.sideTargets[0],
+		s.sideTargets[1],
+		s.dockerComposePath,
+		s.sideTargets[1],
+
+	)
+	readFile = func(filename string) ([]byte, error) {
+		return []byte(dcContent), nil
+	}
+	writeFile = func(filename string, data []byte, perm os.FileMode) error {
+		actual = string(data)
+		return nil
+	}
+
+	DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, color, true)
 
 	s.Equal(expected, actual)
 }
@@ -111,7 +195,7 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsError_WhenWriteFile()
 		return fmt.Errorf("Some error")
 	}
 
-	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.target, s.color, s.blueGreen)
+	err := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
 
 	s.Error(err)
 }
@@ -255,8 +339,15 @@ type DockerComposeMock struct{
 	mock.Mock
 }
 
-func (m *DockerComposeMock) CreateFlowFile(dcPath, target, color string, blueGreen bool) error {
-	args := m.Called(dcPath, target, color, blueGreen)
+func (m *DockerComposeMock) CreateFlowFile(
+		dcPath,
+		serviceName,
+		target string,
+		sideTargets []string,
+		color string,
+		blueGreen bool,
+	) error {
+	args := m.Called(dcPath, serviceName, target, sideTargets, color, blueGreen)
 	return args.Error(0)
 }
 
@@ -305,7 +396,17 @@ func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 		mockObj.On("ScaleTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "CreateFlowFile" {
-		mockObj.On("CreateFlowFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On(
+			"CreateFlowFile",
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+			mock.Anything,
+		).Return(nil)
 	}
 	if skipMethod != "StopTargets" {
 		mockObj.On("StopTargets", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)

@@ -69,7 +69,9 @@ func (s FlowTestSuite) Test_Deploy_InvokesDockerComposeCreateFlowFile_WhenDeploy
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
+		s.opts.ServiceName,
 		s.opts.Target,
+		s.opts.SideTargets,
 		s.opts.NextColor,
 		s.opts.BlueGreen,
 	)
@@ -79,6 +81,8 @@ func (s MainTestSuite) Test_Deploy_ReturnsError_WhenDeployAndDockerComposeCreate
 	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
 	mockObj.On(
 		"CreateFlowFile",
+		mock.Anything,
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -317,7 +321,9 @@ func (s FlowTestSuite) Test_Scale_InvokesDockerComposeCreateFlowFile() {
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
+		s.opts.ServiceName,
 		s.opts.Target,
+		s.opts.SideTargets,
 		s.opts.CurrentColor,
 		s.opts.BlueGreen,
 	)
@@ -327,6 +333,8 @@ func (s MainTestSuite) Test_Scale_ReturnsError_WhenDeployAndDockerComposeCreateF
 	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
 	mockObj.On(
 		"CreateFlowFile",
+		mock.Anything,
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -486,7 +494,7 @@ func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenProvisionFails() {
 	s.Error(actual)
 }
 
-func (s FlowTestSuite) Test_Proxy_InvokesReconfigure() {
+func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenDeploy() {
 	mockObj := getProxyMock("")
 	s.opts.Flow = []string{FLOW_DEPLOY}
 
@@ -497,7 +505,23 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure() {
 		"Reconfigure",
 		s.opts.ProxyHost,
 		s.opts.ProxyReconfPort,
-		s.opts.ServiceName,
+		fmt.Sprintf("%s-%s", s.opts.ServiceName, s.opts.NextColor),
+		s.opts.ServicePath,
+	)
+}
+
+func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenScale() {
+	mockObj := getProxyMock("")
+	s.opts.Flow = []string{FLOW_SCALE}
+
+	Flow{}.Proxy(s.opts, mockObj)
+
+	mockObj.AssertCalled(
+		s.T(),
+		"Reconfigure",
+		s.opts.ProxyHost,
+		s.opts.ProxyReconfPort,
+		fmt.Sprintf("%s-%s", s.opts.ServiceName, s.opts.CurrentColor),
 		s.opts.ServicePath,
 	)
 }
@@ -514,7 +538,7 @@ func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenReconfigureFails() {
 
 func (s FlowTestSuite) Test_Proxy_DoesNotInvokeReconfigure_WhenFlowIsNotDeploy() {
 	mockObj := getProxyMock("")
-	s.opts.Flow = []string{}
+	s.opts.Flow = []string{FLOW_PROXY}
 
 	Flow{}.Proxy(s.opts, mockObj)
 

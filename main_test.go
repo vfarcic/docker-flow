@@ -188,7 +188,9 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithCurrentCo
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
+		s.opts.ServiceName,
 		s.opts.Target,
+		s.opts.SideTargets,
 		s.opts.CurrentColor,
 		s.opts.BlueGreen,
 	)
@@ -208,7 +210,9 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithNextColor
 		s.T(),
 		"CreateFlowFile",
 		s.opts.ComposePath,
+		s.opts.ServiceName,
 		s.opts.Target,
+		s.opts.SideTargets,
 		s.opts.NextColor,
 		s.opts.BlueGreen,
 	)
@@ -218,6 +222,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeCrea
 	mockObj := getDockerComposeMock(s.opts, "CreateFlowFile")
 	mockObj.On(
 		"CreateFlowFile",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

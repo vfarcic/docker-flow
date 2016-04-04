@@ -26,7 +26,9 @@ func getFlow() Flowable {
 func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 	if err := dc.CreateFlowFile(
 		opts.ComposePath,
+		opts.ServiceName,
 		opts.Target,
+		opts.SideTargets,
 		opts.NextColor,
 		opts.BlueGreen,
 	); err != nil {
@@ -59,7 +61,9 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFil
 	if (createFlowFile) {
 		if err := dc.CreateFlowFile(
 			opts.ComposePath,
+			opts.ServiceName,
 			opts.Target,
+			opts.SideTargets,
 			opts.CurrentColor,
 			opts.BlueGreen,
 		); err != nil {
@@ -92,11 +96,17 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 	); err != nil {
 		return err
 	}
-	if m.contains(opts.Flow, FLOW_DEPLOY) {
+	deploy := m.contains(opts.Flow, FLOW_DEPLOY)
+	scale := m.contains(opts.Flow, FLOW_SCALE)
+	if deploy || scale {
+		color := opts.CurrentColor
+		if (deploy) {
+			color = opts.NextColor
+		}
 		if err := proxy.Reconfigure(
 			opts.ProxyHost,
 			opts.ProxyReconfPort,
-			opts.ServiceName,
+			fmt.Sprintf("%s-%s", opts.ServiceName, color),
 			opts.ServicePath,
 		); err != nil {
 			return err
