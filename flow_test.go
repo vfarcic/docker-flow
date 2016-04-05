@@ -505,7 +505,8 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenDeploy() {
 		"Reconfigure",
 		s.opts.ProxyHost,
 		s.opts.ProxyReconfPort,
-		fmt.Sprintf("%s-%s", s.opts.ServiceName, s.opts.NextColor),
+		s.opts.ServiceName,
+		s.opts.NextColor,
 		s.opts.ServicePath,
 	)
 }
@@ -521,7 +522,8 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenScale() {
 		"Reconfigure",
 		s.opts.ProxyHost,
 		s.opts.ProxyReconfPort,
-		fmt.Sprintf("%s-%s", s.opts.ServiceName, s.opts.CurrentColor),
+		s.opts.ServiceName,
+		s.opts.CurrentColor,
 		s.opts.ServicePath,
 	)
 }
@@ -529,27 +531,18 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenScale() {
 func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenReconfigureFails() {
 	s.opts.Flow = []string{FLOW_DEPLOY}
 	mockObj := getProxyMock("Reconfigure")
-	mockObj.On("Reconfigure", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("This is an error"))
+	mockObj.On(
+		"Reconfigure",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(fmt.Errorf("This is an error"))
 
 	actual := Flow{}.Proxy(s.opts, mockObj)
 
 	s.Error(actual)
-}
-
-func (s FlowTestSuite) Test_Proxy_DoesNotInvokeReconfigure_WhenFlowIsNotDeploy() {
-	mockObj := getProxyMock("")
-	s.opts.Flow = []string{FLOW_PROXY}
-
-	Flow{}.Proxy(s.opts, mockObj)
-
-	mockObj.AssertNotCalled(
-		s.T(),
-		"Reconfigure",
-		s.opts.ProxyHost,
-		s.opts.ProxyReconfPort,
-		s.opts.ServiceName,
-		s.opts.ServicePath,
-	)
 }
 
 // Suite

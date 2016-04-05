@@ -87,11 +87,21 @@ Reconfiguring Proxy After Deployment
     --service-path "/api/v1/books" \
     --flow deploy --flow proxy
 
-./docker-flow --scale +1 --flow scale
+docker ps -a --filter name=docker-flow-proxy
 
-./docker-flow --flow deploy
+docker exec -it docker-flow-proxy cat /cfg/haproxy.cfg
+
+./docker-flow \
+    --scale +1 \
+    --flow scale --flow proxy
+
+docker exec -it docker-flow-proxy cat /cfg/haproxy.cfg
+
+./docker-flow --flow deploy --flow stop-old
 
 # Run integration tests
 
 ./docker-flow --flow proxy
+
+docker exec -it docker-flow-proxy cat /cfg/haproxy.cfg
 ```

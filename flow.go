@@ -96,21 +96,18 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 	); err != nil {
 		return err
 	}
-	deploy := m.contains(opts.Flow, FLOW_DEPLOY)
-	scale := m.contains(opts.Flow, FLOW_SCALE)
-	if deploy || scale {
-		color := opts.CurrentColor
-		if (deploy) {
-			color = opts.NextColor
-		}
-		if err := proxy.Reconfigure(
-			opts.ProxyHost,
-			opts.ProxyReconfPort,
-			fmt.Sprintf("%s-%s", opts.ServiceName, color),
-			opts.ServicePath,
-		); err != nil {
-			return err
-		}
+	color := opts.CurrentColor
+	if (m.contains(opts.Flow, FLOW_DEPLOY)) {
+		color = opts.NextColor
+	}
+	if err := proxy.Reconfigure(
+		opts.ProxyHost,
+		opts.ProxyReconfPort,
+		opts.ServiceName,
+		color,
+		opts.ServicePath,
+	); err != nil {
+		return err
 	}
 	return nil
 }

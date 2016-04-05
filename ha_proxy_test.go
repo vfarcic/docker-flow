@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"os"
+	"time"
 )
 
 type HaProxyTestSuite struct {
@@ -19,6 +20,7 @@ type HaProxyTestSuite struct {
 	ExitedMessage 	string
 	ProxyHost		string
 	Project		 	string
+	Color			string
 	ServicePath		[]string
 	ReconfPort		string
 	Server          *httptest.Server
@@ -29,6 +31,7 @@ func (s *HaProxyTestSuite) SetupTest() {
 	s.Host = "tcp://my-docker-proxy-host"
 	s.ProxyHost = "http://my-docker-proxy-host.com"
 	s.Project = "myProject"
+	s.Color = "purpurina"
 	s.ServicePath = []string{"/path/to/my/service", "/path/to/my/other/service"}
 	s.ExitedMessage = "Exited (2) 15 seconds ago"
 	s.ReconfPort = "5362"
@@ -55,6 +58,7 @@ func (s *HaProxyTestSuite) SetupTest() {
 		return nil
 	}
 	logPrintln = func(v ...interface{}) { }
+	sleep = func(d time.Duration) { }
 }
 
 // Provision
@@ -219,30 +223,52 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenStartFailure() {
 // Reconfigure
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProxyHostIsEmpty() {
-	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.Color, s.ServicePath)
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProjectIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.Color, s.ServicePath)
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, []string{""})
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, []string{""})
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenReconfPortIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.Color, s.ServicePath)
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
+	actual := ""
+	expected := fmt.Sprintf(
+		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&serviceColor=%s&servicePath=%s",
+		s.ProxyHost,
+		s.ReconfPort,
+		s.Project,
+		s.Color,
+		strings.Join(s.ServicePath, ","),
+	)
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		actual = url
+		return nil, fmt.Errorf("This is an error")
+	}
+
+	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest_WithOutColor_WhenNotBlueGreen() {
 	actual := ""
 	expected := fmt.Sprintf(
 		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
@@ -258,7 +284,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.ServicePath)
+	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "", s.ServicePath)
 
 	s.Equal(expected, actual)
 }
@@ -279,7 +305,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithPrependedHttp() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, s.ServicePath)
+	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, "", s.ServicePath)
 
 	s.Equal(expected, actual)
 }
@@ -291,7 +317,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenRequestFails() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
 
 	s.Error(err)
 }
@@ -301,7 +327,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenResponseCodeIsNot2xx
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 
-	err := HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.Color, s.ServicePath)
 
 	s.Error(err)
 }

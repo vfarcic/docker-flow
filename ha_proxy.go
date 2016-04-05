@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"strings"
 	"net/http"
+	"time"
 )
+
 
 const containerStatusRunning = 1
 const containerStatusExited = 2
@@ -41,15 +43,17 @@ func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
 		if err := m.start(); err != nil {
 			return err
 		}
+		sleep(time.Second * 5)
 	default:
 		if err := m.run(reconfPort, scAddress); err != nil {
 			return err
 		}
+		sleep(time.Second * 5)
 	}
 	return nil
 }
 
-func (m HaProxy) Reconfigure(host, reconfPort, serviceName string, servicePath []string) error {
+func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string) error {
 	if len(host) == 0 {
 		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
 	}
@@ -66,18 +70,23 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName string, servicePath [
 	if !strings.HasPrefix(strings.ToLower(address), "http") {
 		address = fmt.Sprintf("http://%s", address)
 	}
+	colorQuery := ""
+	if (len(serviceColor) > 0) {
+		colorQuery = fmt.Sprintf("&serviceColor=%s", serviceColor)
+	}
 	resp, err := httpGet(fmt.Sprintf(
-		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
+		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s%s&servicePath=%s",
 		address,
 		serviceName,
+		colorQuery,
 		strings.Join(servicePath, ","),
 	))
 	if err != nil {
-		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
+		return fmt.Errorf("The request to reconfigure the proxy failed\n%s\n", err.Error())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("The request to reconfigure the proxy failed\n%#v\n", err)
+		return fmt.Errorf("The request to reconfigure the proxy failed\n%s\n", err.Error())
 	}
 	return nil
 }

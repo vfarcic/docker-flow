@@ -15,8 +15,8 @@ func (m *ProxyMock) Provision(host, reconfPort, certPath, scAddress string) erro
 	return args.Error(0)
 }
 
-func (m *ProxyMock) Reconfigure(host, reconfPort, serviceName string, servicePath []string) error {
-	args := m.Called(host, reconfPort, serviceName, servicePath)
+func (m *ProxyMock) Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string) error {
+	args := m.Called(host, reconfPort, serviceName, serviceColor, servicePath)
 	return args.Error(0)
 }
 
@@ -27,7 +27,7 @@ func getProxyMock(skipMethod string) *ProxyMock {
 		mockObj.On("Provision", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	if skipMethod != "Reconfigure" {
-		mockObj.On("Reconfigure", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mockObj.On("Reconfigure", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	}
 	return mockObj
 }

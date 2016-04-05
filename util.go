@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 )
 
 var readFile = ioutil.ReadFile
@@ -24,4 +25,7 @@ var SetDockerHost = func(host, certPath string) {
 }
 var runCmd = func(cmd *exec.Cmd) error {
 	return cmd.Run()
+}
+var sleep = func(d time.Duration) {
+	time.Sleep(d)
 }

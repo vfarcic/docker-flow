@@ -49,94 +49,94 @@ func (s *IntegrationTestSuite) SetupTest() {
 
 // Integration
 
-//func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
-//	origConsulAddress := os.Getenv("FLOW_CONSUL_ADDRESS")
-//	defer func() {
-//		os.Setenv("FLOW_CONSUL_ADDRESS", origConsulAddress)
-//	}()
-//
-//	log.Println(">> Integration tests: deployment")
-//
-//	log.Println("First deployment (blue)")
-//	s.runCmdWithStdOut(
-//		true,
-//		"./docker-flow",
-//		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
-//		"--target", "app",
-//		"--side-target", "db",
-//		"--blue-green",
-//	)
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-blue_1", "Up" },
-//		{"books-ms-db", "Up" },
-//	})
-//
-//	log.Println("Second deployment (green)")
-//	os.Setenv("FLOW_CONSUL_ADDRESS", fmt.Sprintf("http://%s:8500", s.ConsulIp))
-//	s.runCmdWithStdOut(true, "./docker-flow", "--flow", "deploy")
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-blue_1", "Up" },
-//		{"booksms_app-green_1", "Up" },
-//	})
-//
-//	log.Println("Third deployment (blue) with stop old release (green)")
-//	s.runCmdWithStdOut(
-//		true,
-//		"./docker-flow",
-//		"--flow", "deploy", "--flow", "stop-old")
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-blue_1", "Up" },
-//		{"booksms_app-green_1", "Exited" },
-//	})
-//}
-//
-//func (s IntegrationTestSuite) Test_Scaling() {
-//	log.Println(">> Integration tests: scaling")
-//
-//	log.Println("First deployment (blue, 2 instances)")
-//	s.runCmdWithStdOut(
-//		true,
-//		"./docker-flow",
-//		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
-//		"--flow", "deploy",
-//		"--scale", "2",
-//	)
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-blue_1", "Up" },
-//		{"booksms_app-blue_2", "Up" },
-//		{"books-ms-db", "Up" },
-//	})
-//
-//	log.Println("Second deployment (green, 4 (+2) instances)")
-//	s.runCmdWithStdOut(
-//		true,
-//		"./docker-flow",
-//		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
-//		"--flow", "deploy",
-//		"--scale", "+2",
-//	)
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-green_1", "Up" },
-//		{"booksms_app-green_2", "Up" },
-//		{"booksms_app-green_3", "Up" },
-//		{"booksms_app-green_4", "Up" },
-//	})
-//
-//	log.Println("Scaling (green, 3 (-1) instances)")
-//	s.runCmdWithStdOut(
-//		true,
-//		"./docker-flow",
-//		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
-//		"--flow", "scale",
-//		"--scale", "\"-1\"",
-//	)
-//	s.verifyContainer([]ContainerStatus{
-//		{"booksms_app-green_1", "Up" },
-//		{"booksms_app-green_2", "Up" },
-//		{"booksms_app-green_3", "Up" },
-//		{"booksms_app-green_4", "N/A" },
-//	})
-//}
+func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
+	origConsulAddress := os.Getenv("FLOW_CONSUL_ADDRESS")
+	defer func() {
+		os.Setenv("FLOW_CONSUL_ADDRESS", origConsulAddress)
+	}()
+
+	log.Println(">> Integration tests: deployment")
+
+	log.Println("First deployment (blue)")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--target", "app",
+		"--side-target", "db",
+		"--blue-green",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-blue_1", "Up" },
+		{"books-ms-db", "Up" },
+	})
+
+	log.Println("Second deployment (green)")
+	os.Setenv("FLOW_CONSUL_ADDRESS", fmt.Sprintf("http://%s:8500", s.ConsulIp))
+	s.runCmdWithStdOut(true, "./docker-flow", "--flow", "deploy")
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-blue_1", "Up" },
+		{"booksms_app-green_1", "Up" },
+	})
+
+	log.Println("Third deployment (blue) with stop old release (green)")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--flow", "deploy", "--flow", "stop-old")
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-blue_1", "Up" },
+		{"booksms_app-green_1", "Exited" },
+	})
+}
+
+func (s IntegrationTestSuite) Test_Scaling() {
+	log.Println(">> Integration tests: scaling")
+
+	log.Println("First deployment (blue, 2 instances)")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--flow", "deploy",
+		"--scale", "2",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-blue_1", "Up" },
+		{"booksms_app-blue_2", "Up" },
+		{"books-ms-db", "Up" },
+	})
+
+	log.Println("Second deployment (green, 4 (+2) instances)")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--flow", "deploy",
+		"--scale", "+2",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-green_1", "Up" },
+		{"booksms_app-green_2", "Up" },
+		{"booksms_app-green_3", "Up" },
+		{"booksms_app-green_4", "Up" },
+	})
+
+	log.Println("Scaling (green, 3 (-1) instances)")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--flow", "scale",
+		"--scale", "\"-1\"",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"booksms_app-green_1", "Up" },
+		{"booksms_app-green_2", "Up" },
+		{"booksms_app-green_3", "Up" },
+		{"booksms_app-green_4", "N/A" },
+	})
+}
 
 func (s IntegrationTestSuite) Test_Proxy() {
 	log.Println(">> Integration tests: proxy")
@@ -149,7 +149,7 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"-ip", s.ConsulIp, fmt.Sprintf("consul://%s:8500", s.ConsulIp),
 	)
 
-	log.Println("Runs docker-flow-proxy when not present")
+	log.Println("Runs proxy when not present and reconfigures it when deploy")
 	s.runCmdWithStdOut(
 		true,
 		"./docker-flow",
@@ -157,13 +157,17 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--proxy-host", s.ProxyHost,
 		"--proxy-docker-host", s.ProxyDockerHost,
 		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
-		"--flow", "proxy",
+		"--service-path", s.ServicePath,
+		"--flow", "deploy", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
 		{"docker-flow-proxy", "Up" },
 	})
+	resp, err := http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	s.NoError(err)
+	s.Equal(200, resp.StatusCode)
 
-	log.Println("Runs docker-flow-proxy when stopped")
+	log.Println("Runs proxy when stopped and reconfigures it when scale")
 	s.runCmdWithStdOut(false, "docker", "stop", "docker-flow-proxy")
 	s.verifyContainer([]ContainerStatus{
 		{"docker-flow-proxy", "Exited" },
@@ -175,13 +179,28 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--proxy-host", s.ProxyHost,
 		"--proxy-docker-host", s.ProxyDockerHost,
 		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
-		"--flow", "proxy",
+		"--service-path", s.ServicePath,
+		"--scale", "+1",
+		"--flow", "scale", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
 		{"docker-flow-proxy", "Up" },
 	})
+	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	s.NoError(err)
+	s.Equal(200, resp.StatusCode)
+	s.runCmdWithStdOut(true, "docker", "rm", "-f", "booksms_app-blue_1")
+	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	s.NoError(err)
+	s.Equal(200, resp.StatusCode)
 
-	log.Println("Reconfigures proxy when deploy")
+	log.Println("Works as a standalone")
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--flow", "deploy", "--flow", "stop-old",
+	)
 	s.runCmdWithStdOut(
 		true,
 		"./docker-flow",
@@ -190,10 +209,9 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--proxy-docker-host", s.ProxyDockerHost,
 		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
 		"--service-path", s.ServicePath,
-		"--flow", "deploy", "--flow", "proxy",
+		"--flow", "proxy",
 	)
-	time.Sleep(time.Second * 3)
-	resp, err := http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
 	s.NoError(err)
 	s.Equal(200, resp.StatusCode)
 }
