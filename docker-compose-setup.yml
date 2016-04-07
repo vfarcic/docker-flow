@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+  consul:
+    container_name: consul
+    image: progrium/consul
+    ports:
+      - 8500:8500
+      - 8301:8301
+      - 8300:8300
+    command: -server -bootstrap
+
+  registrator:
+    container_name: registrator
+    image: gliderlabs/registrator
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock
+    command: -ip $DOCKER_IP consul://$CONSUL_IP:8500

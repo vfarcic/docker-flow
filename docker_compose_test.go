@@ -384,10 +384,10 @@ func (m *DockerComposeMock) StopTargets(host, certPath, project string, targets 
 func getDockerComposeMock(opts Opts, skipMethod string) *DockerComposeMock {
 	mockObj := new(DockerComposeMock)
 	if skipMethod != "PullTargets" {
-		mockObj.On("PullTargets", opts.Host, opts.CertPath, opts.Project, Flow{}.GetTargets(opts)).Return(nil)
+		mockObj.On("PullTargets", opts.Host, opts.CertPath, opts.Project, Flow{}.GetPullTargets(opts)).Return(nil)
 	}
 	if skipMethod != "UpTargets" {
-		mockObj.On("UpTargets", opts.Host, opts.CertPath, opts.Project, opts.SideTargets).Return(nil)
+		mockObj.On("UpTargets", opts.Host, opts.CertPath, opts.Project, append(opts.SideTargets, opts.NextTarget)).Return(nil)
 	}
 	if skipMethod != "RmTargets" {
 		mockObj.On("RmTargets", opts.Host, opts.CertPath, opts.Project, []string{opts.NextTarget}).Return(nil)

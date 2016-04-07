@@ -2,3 +2,5 @@ target: app
 side_targets:
   - db
 blue_green: true
+service_path:
+  - /api/v1/books

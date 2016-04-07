@@ -9,8 +9,365 @@ The current list of features is as follows.
 
 * Blue-green deployment
 * Relative scaling
+* Proxy reconfiguration
 
 The latest release can be found [here](https://github.com/vfarcic/docker-flow/releases/latest).
+
+Examples
+--------
+
+More detailed examples can be found in the following articles:
+
+* [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/)
+
+The following examples will use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way. Please note that the examples presented below have been tested on OS X and Linux. In case you are a Windows user, you might want to explore the OS agnostic examples provided in the before mentioned articles.
+
+Apart from **Docker Flow**, requirements for the complete solution are [Consul](https://www.consul.io/) that acts as service registry and [Registrator](https://github.com/gliderlabs/registrator) that will monitor Docker events and update Consul every time a new container is run or an existing one is stopped.
+
+### Setting it up
+
+Before we begin, please clone the code from this repository.
+
+```sh
+git clone https://github.com/vfarcic/docker-flow.git
+
+cd docker-flow
+```
+
+Before proceeding further, please download the [latest release](https://github.com/vfarcic/docker-flow/releases) to the *docker-flow* directory and make it executable.
+
+We'll start by creating a server that will host Consul and Proxy. Later on we'll' proceed with a Swarm cluster consisting of three nodes.
+
+As you'll see soon, the proxy will be provisioned automatically so for the first server, we only need to create the machine and run Consul.
+
+TODO: Start change to script
+
+```sh
+docker-machine create -d virtualbox proxy
+
+export CONSUL_IP=$(docker-machine ip proxy)
+
+export PROXY_IP=$(docker-machine ip proxy)
+
+eval "$(docker-machine env proxy)"
+
+docker-compose -f docker-compose-setup.yml \
+    up -d consul
+```
+
+We created the machine called *proxy*, created an environment variable *CONSUL_IP* (we'll use it later), and run the target *consul* defined in the *docker-compose-setup.yml* file.
+
+Now that we have the proxy server with *Consul*, we can create the Swarm cluster.
+
+```sh
+docker-machine create -d virtualbox \
+    --swarm --swarm-master \
+    --swarm-discovery="consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-advertise=eth1:2376" \
+    swarm-master
+
+docker-machine create -d virtualbox \
+    --swarm \
+    --swarm-discovery="consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-advertise=eth1:2376" \
+    swarm-node-1
+
+docker-machine create -d virtualbox \
+    --swarm \
+    --swarm-discovery="consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
+    --engine-opt="cluster-advertise=eth1:2376" \
+    swarm-node-2
+```
+
+Now that the Swarm cluster is up and running, the only thing left is to run *Registrator* on all three machines.
+
+```sh
+eval "$(docker-machine env swarm-master)"
+
+export DOCKER_IP=$(docker-machine ip swarm-master)
+
+docker-compose -f docker-compose-setup.yml \
+    up -d registrator
+
+eval "$(docker-machine env swarm-node-1)"
+
+export DOCKER_IP=$(docker-machine ip swarm-node-1)
+
+docker-compose -f docker-compose-setup.yml \
+    up -d registrator
+
+eval "$(docker-machine env swarm-node-2)"
+
+export DOCKER_IP=$(docker-machine ip swarm-node-2)
+
+docker-compose -f docker-compose-setup.yml \
+    up -d registrator
+```
+
+TODO: End change to script
+
+Let's take a look at the state of our Swarm cluster.
+
+```bash
+eval "$(docker-machine env --swarm swarm-master)"
+
+docker ps -a
+```
+
+The output of the `ps` command is as follows.
+
+```
+ONTAINER ID        IMAGE                    COMMAND                  CREATED             STATUS              PORTS               NAMES
+ed3bf310d9c5        gliderlabs/registrator   "/bin/registrator -ip"   14 minutes ago      Up 14 minutes                           swarm-node-2/registrator
+23d40aad10c5        gliderlabs/registrator   "/bin/registrator -ip"   15 minutes ago      Up 15 minutes                           swarm-node-1/registrator
+89a2aa6f5651        gliderlabs/registrator   "/bin/registrator -ip"   17 minutes ago      Up 17 minutes                           swarm-master/registrator
+6be0773f0008        swarm:latest             "/swarm join --advert"   17 minutes ago      Up 17 minutes                           swarm-node-2/swarm-agent
+1fb37d0463a3        swarm:latest             "/swarm join --advert"   18 minutes ago      Up 18 minutes                           swarm-node-1/swarm-agent
+549df450cb91        swarm:latest             "/swarm join --advert"   20 minutes ago      Up 20 minutes                           swarm-master/swarm-agent
+38ea9a4b449f        swarm:latest             "/swarm manage --tlsv"   20 minutes ago      Up 20 minutes                           swarm-master/swarm-agent-master
+```
+
+As you can see, all three Swarm nodes are running *Registrator* and *Swarm Node* container. On top of that we have *Swarm Master* running on the main server.
+
+Aside from the Swarm cluster, we have a lone server called *proxy* running, at the moment, only Consul.
+
+```bash
+eval "$(docker-machine env proxy)"
+
+docker ps -a
+```
+
+The output of the `ps` command is as follows.
+
+```
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                                                                         NAMES
+6a33159ba9e3        progrium/consul     "/bin/start -server -"   5 minutes ago       Up 5 minutes        53/udp, 53/tcp, 8302/tcp, 0.0.0.0:8300-8301->8300-8301/tcp, 8400/tcp, 8301-8302/udp, 0.0.0.0:8500->8500/tcp   consul
+```
+
+With the cluster and the proxy server set up, we are, finally, ready to give **Docker Flow** a spin and see it in action.
+
+### Reconfiguring proxy after deployment
+
+*Proxy* flow requires Consul address as well as the information about the node proxy is (or will be) running on. *Docker Flow* allows three ways to provide necessary information. We can define arguments inside the *docker-flow.yml* file, as environment variables, and, finally, as command line arguments. In this example, we'll use the combination of environment variables and command line arguments.
+
+Let's start by defining proxy and Consul data through environment variables.
+
+```bash
+export FLOW_PROXY_HOST=$(docker-machine ip proxy)
+
+export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
+
+eval "$(docker-machine env proxy)"
+
+export FLOW_PROXY_DOCKER_HOST=$DOCKER_HOST
+
+export FLOW_PROXY_DOCKER_CERT_PATH=$DOCKER_CERT_PATH
+```
+
+Now we are ready to deploy the first release of our sample service.
+
+```bash
+eval "$(docker-machine env --swarm swarm-master)"
+
+./docker-flow \
+    --blue-green \
+    --target=app \
+    --service-path="/api/v1/books" \
+    --side-target=db \
+    --flow=deploy --flow=proxy
+```
+
+We instructed `docker-flow` to employ *blue-green deployment* process and that the target (defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml)) is *app*. We also told it that the service exposes an API on the address */api/v1/books* and that it requires a side (or secondary) target *db*. Finally, we specified that the we want it to deploy the targets and reconfigure the proxy. A lot happened in that single command so we'll explore the result in more detail.
+
+Let's take a look at our servers and see what happened. We'll start with the Swarm cluster.
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Image}}"
+```
+
+The output of the `ps` command is as follows.
+
+```
+NAMES                                IMAGE
+swarm-node-2/dockerflow_app-blue_1   vfarcic/books-ms
+swarm-node-1/books-ms-db             mongo
+...
+```
+
+*Docker Flow* run our main target *app* together with the side target name *books-ms-db*. Both targets are defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml). The first difference you'll notice is that it added *blue* to the container name. The reason behind that is in the `--blue-green` argument. If present, *Docker Flow* will use the *blue-green* process to run container. If you are unfamiliar with the process, please read the [Blue-Green Deployment](http://technologyconversations.com/2016/02/08/blue-green-deployment/) article for general information and [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) for more detailed explanation within the *Docker Flow* context.
+
+Let's take a look at the *proxy* node as well.
+
+```bash
+eval "$(docker-machine env proxy)"
+
+docker ps --format "table {{.Names}}\t{{.Image}}"
+```
+
+The output of the `ps` command is as follows.
+
+```
+NAMES               IMAGE
+docker-flow-proxy   vfarcic/docker-flow-proxy
+consul              progrium/consul
+```
+
+*Docker Flow* detected that there was no *proxy* on that node and run it for us. The *docker-flow-proxy* container contains *HAProxy* together with custom code that reconfigures it every time a new service is run. For more information about the *Docker Flow: Proxy*, please read the [project README](https://github.com/vfarcic/docker-flow-proxy).
+
+Since we instructed Swarm to run our service somewhere inside the cluster, we could not know in advance which server will be chosen. In this particular case, our service ended up running inside the *swarm-node-2*. Moreover, in order to avoid potential conflicts and allow easier scaling, we did not specif which port the service should expose. In other words, both the IP and the port of the service are not defined in advance. Among other things, *Docker Flow* solves this by running *Docker Flow: Proxy* and instructing it to reconfigure itself with the information gathered after the container is run. We can confirm that proxy reconfiguration was indeed successful by sending an HTTP request to the newly deployed service.
+
+```bash
+curl -I $PROXY_IP/api/v1/books
+```
+
+The output of the `curl` command is as follows.
+
+```
+HTTP/1.1 200 OK
+Server: spray-can/1.3.1
+Date: Thu, 07 Apr 2016 19:23:34 GMT
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=UTF-8
+Content-Length: 2
+```
+
+Even though our service is running in one of the servers chosen by Swarm and is exposing a random port, the proxy was reconfigured and we can access it through a fixed IP and without a port (to be more precise through standard HTTP port 80 or HTTPS port 443).
+
+### Deploying a new release without downtime
+
+Let's imagine that we want to deploy a new release of the service. We do not want to have any downtime so we'll continue using the *blue-green* process. Since the current release is *blue*, the new one will be named *green*. Downtime will be avoided by running the new release (*green*) in parallel with the old one (*blue*) and only after it is fully up and running, reconfigure the proxy so that all requests are sent to the new release. Only after the proxy is reconfigured, we want the old release to stop running and release the resources it was using. We can accomplish all that by running a `docker-flow` command. However, this time we'll leverage the [docker-flow.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-flow.yml) file that already has some of the arguments we used before.
+
+The content of the [docker-flow.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-flow.yml) is as follows.
+
+```yml
+target: app
+side_targets:
+  - db
+blue_green: true
+service_path:
+  - /api/v1/books
+```
+
+Let's run the new release.
+
+```bash
+eval "$(docker-machine env --swarm swarm-master)"
+
+./docker-flow \
+    --flow=deploy --flow=proxy --flow=stop-old
+```
+
+```bash
+docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+```
+
+The output of the `ps` command is as follows.
+
+```bash
+NAMES                                 IMAGE                    STATUS
+swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 52 seconds
+swarm-node-2/dockerflow_app-blue_1    vfarcic/books-ms         Exited (137) 54 seconds ago
+swarm-node-1/books-ms-db              mongo                    Up About an hour
+...
+```
+
+From the output we can observe that the new release (*green*) is running and that the old (*blue*) was stopped.
+
+Let's confirm that the proxy was reconfigured as well.
+
+```bash
+curl -I $PROXY_IP/api/v1/books
+```
+
+The output of the `curl` command is as follows.
+
+```
+HTTP/1.1 200 OK
+Server: spray-can/1.3.1
+Date: Thu, 07 Apr 2016 19:45:07 GMT
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=UTF-8
+Content-Length: 2
+```
+
+The new release was deployed without any downtime and the proxy has been reconfigured to redirect all requests to it.
+
+### Scaling the service
+
+One of the great benefits *Docker Compose* provides is scaling. We can use it to scale to any number of instances. However, it allows only absolute scaling. We cannot instruct *Docker Compose* to apply relative scaling. That makes the automation of some of the processes difficult. For example, we might have an increase in traffic that requires us to increase the number of instances by two. In such a scenario, the automation script would need to obtain the number of instances that are currently running and do some simple math to get to the desired number and pass it to Docker Compose. On top of all that, proxy still needs to be reconfigured as well. *Docker Flow* makes this process much easier.
+
+Let's see it in action.
+
+```bash
+./docker-flow \
+    --scale="+2" \
+    --flow=scale --flow=proxy
+```
+
+The scaling result can be observed by listing the currently running Docker processes.
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+```
+
+The output of the `ps` command is as follows.
+
+```
+NAMES                                 IMAGE                    STATUS
+swarm-node-2/dockerflow_app-green_2   vfarcic/books-ms         Up About a minute
+swarm-master/dockerflow_app-green_3   vfarcic/books-ms         Up About a minute
+swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 33 minutes
+```
+
+The number of instances was increased by two. While only one instance was running before, now we have three.
+
+Similarly, the proxy was reconfigured as well and, from now on, it will load balance all requests between those three instances.
+
+We can use the same method to de-scale the number of instances by prefixing the value of the `--scale` argument with the minus sign (*-*). Following the same example, when the trafix returns to normal, we can de-scale by number of instances to the original number by running the following command.
+
+```bash
+./docker-flow \
+    --scale="-2" \
+    --flow=scale --flow=proxy
+```
+
+### Testing deployments to production
+
+The major downside of the proxy examples we run by now is inability to verify the release before reconfiguring the proxy. Ideally, we should use the blue-green process to deploy the new release in parallel with the old one, run a set of tests that validate that everything is working as expected, and, finally, reconfigure the proxy only if all tests were successful. We can accomplish that easily by running `docker-flow` twice.
+
+First, we should deploy the new version.
+
+```bash
+./docker-flow \
+    --flow=deploy
+```
+
+Let's list the Docker processes.
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+The output of the `ps` command is as follows.
+
+```
+NAMES                                 STATUS              PORTS
+swarm-node-2/dockerflow_app-blue_1    Up 5 minutes        192.168.99.103:32770->8080/tcp
+swarm-node-1/dockerflow_app-green_1   Up About an hour    192.168.99.102:32768->8080/tcp
+```
+
+At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify *--flow=proxy*, the proxy is left unchanged and still redirects to the old release. What this means is that the users of our service are still seeing the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
+
+After the tests are run, we have two paths we can take. If one of the tests failed, we can just stop the new release and fix the problem. Since the proxy is still redirecting all requests to the old release, our users we not affected by this failure and we can dedicate our time towards fixing the problem. On the other hand, if all tests were successful, we can run the rest of the *flow* that will reconfigure the proxy and stop the old release.
+
+```bash
+./docker-flow \
+    --flow=proxy \
+    --flow=stop-old
+```
 
 Arguments
 ---------
@@ -68,7 +425,7 @@ flow:
   - stop-old
 ```
 
-Examples
---------
+Feedback and Contributions
+--------------------------
 
-Examples can be found in the [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) article.
+I'd appreciate any feedback you might give (both positive and negative). Feel fee to [create a new issue](https://github.com/vfarcic/docker-flow/issues), send a pull request, or tell me about any feature you might be missing. You can find my contact information in the [About](http://technologyconversations.com/about/) section of my [blog](http://technologyconversations.com/).

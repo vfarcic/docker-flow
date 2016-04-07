@@ -6,7 +6,7 @@ import (
 
 type Flowable interface {
 	Deploy(opts Opts, dc DockerComposable) error
-	GetTargets(opts Opts) []string
+	GetPullTargets(opts Opts) []string
 	Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error
 	Proxy(opts Opts, proxy Proxy) error
 }
@@ -36,17 +36,17 @@ func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 	}
 	logPrintln(fmt.Sprintf("Deploying (%s)...", opts.NextTarget))
 
-	targets := m.GetTargets(opts)
-	if err := dc.PullTargets(opts.Host, opts.CertPath, opts.Project, targets); err != nil {
-		return fmt.Errorf("The deployment phase failed\n%s", err.Error())
-	}
-	if err := dc.UpTargets(opts.Host, opts.CertPath, opts.Project, opts.SideTargets); err != nil {
-		return fmt.Errorf("The deployment phase failed\n%s", err.Error())
+	if err := dc.PullTargets(opts.Host, opts.CertPath, opts.Project, m.GetPullTargets(opts)); err != nil {
+		return fmt.Errorf("The deployment phase failed (pull)\n%s", err.Error())
 	}
 	if opts.BlueGreen {
 		if err := dc.RmTargets(opts.Host, opts.CertPath, opts.Project, []string{opts.NextTarget}); err != nil {
-			return fmt.Errorf("The deployment phase failed\n%s", err.Error())
+			return fmt.Errorf("The deployment phase failed (rm)\n%s", err.Error())
 		}
+	}
+	targets := append(opts.SideTargets, opts.NextTarget)
+	if err := dc.UpTargets(opts.Host, opts.CertPath, opts.Project, targets); err != nil {
+		return fmt.Errorf("The deployment phase failed (up)\n%s", err.Error())
 	}
 	if err := m.Scale(opts, dc, opts.NextTarget, false); err != nil {
 		return err
@@ -112,7 +112,7 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 	return nil
 }
 
-func (m Flow) GetTargets(opts Opts) []string {
+func (m Flow) GetPullTargets(opts Opts) []string {
 	targets := make([]string, 0);
 	targets = append(targets, opts.NextTarget)
 	if opts.PullSideTargets {

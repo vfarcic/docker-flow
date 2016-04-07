@@ -110,7 +110,7 @@ func (s FlowTestSuite) Test_DeployInvokesPullTargets() {
 
 	flow.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(s.T(), "PullTargets", opts.Host, opts.CertPath, opts.Project, flow.GetTargets(opts))
+	mockObj.AssertCalled(s.T(), "PullTargets", opts.Host, opts.CertPath, opts.Project, flow.GetPullTargets(opts))
 }
 
 func (s FlowTestSuite) Test_DeployReturnsError_WhenPullTargetsFails() {
@@ -137,7 +137,7 @@ func (s FlowTestSuite) Test_DeployInvokesUpTargets() {
 
 	Flow{}.Deploy(opts, mockObj)
 
-	mockObj.AssertCalled(s.T(), "UpTargets", opts.Host, opts.CertPath, opts.Project, opts.SideTargets)
+	mockObj.AssertCalled(s.T(), "UpTargets", opts.Host, opts.CertPath, opts.Project, append(opts.SideTargets, opts.NextTarget))
 }
 
 func (s FlowTestSuite) Test_DeployReturnsError_WhenUpTargetsFails() {
@@ -183,7 +183,7 @@ func (s FlowTestSuite) Test_DeployDoesNotInvokeRmTargets_WhenBlueGreenIsFalse() 
 
 	Flow{}.Deploy(opts, mockObj)
 
-	mockObj.AssertNotCalled(s.T(), "RmTargets", opts.Host, opts.Project, []string{opts.NextTarget})
+	mockObj.AssertNotCalled(s.T(), "RmTargets", opts.Host, opts.Project, append(opts.SideTargets, opts.NextTarget))
 }
 
 func (s FlowTestSuite) Test_DeployReturnsError_WhenRmTargetsFails() {
@@ -450,7 +450,7 @@ func (s FlowTestSuite) Test_GetTargetsReturnsAllTargets() {
 	}
 	expected := append([]string{opts.NextTarget}, opts.SideTargets...)
 
-	actual := Flow{}.GetTargets(opts)
+	actual := Flow{}.GetPullTargets(opts)
 
 	s.Equal(expected, actual)
 }
@@ -463,7 +463,7 @@ func (s FlowTestSuite) Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets
 	}
 	expected := []string{opts.NextTarget}
 
-	actual := Flow{}.GetTargets(opts)
+	actual := Flow{}.GetPullTargets(opts)
 
 	s.Equal(expected, actual)
 }
@@ -568,7 +568,7 @@ func (m *FlowMock) Deploy(opts Opts, dc DockerComposable) error {
 	return args.Error(0)
 }
 
-func (m *FlowMock) GetTargets(opts Opts) []string {
+func (m *FlowMock) GetPullTargets(opts Opts) []string {
 //	args := m.Called(opts)
 	return []string{}
 }
@@ -588,8 +588,8 @@ func getFlowMock(skipMethod string) *FlowMock {
 	if skipMethod != "Deploy" {
 		mockObj.On("Deploy", mock.Anything, mock.Anything).Return(nil)
 	}
-	if skipMethod != "GetTargets" {
-		mockObj.On("GetTargets", mock.Anything).Return(nil)
+	if skipMethod != "GetPullTargets" {
+		mockObj.On("GetPullTargets", mock.Anything).Return(nil)
 	}
 	if skipMethod != "Scale" {
 		mockObj.On("Scale", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)

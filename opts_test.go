@@ -37,7 +37,7 @@ func (s *OptsTestSuite) SetupTest() {
 	}
 }
 
-// processOpts
+// ProcessOpts
 
 func (s OptsTestSuite) Test_ProcessOpts_ReturnsNil() {
 	actual := ProcessOpts(&s.opts)
