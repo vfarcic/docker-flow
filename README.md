@@ -2,6 +2,9 @@ Docker Flow
 ===========
 
 * [Introduction](#introduction)
+* [Examples](#examples)
+* [Arguments](#arguments)
+* [Feedback and Contribution](#feedback-and-ontribution)
 
 Introduction
 ------------
@@ -367,7 +370,7 @@ flow:
   - stop-old
 ```
 
-Feedback and Contributions
---------------------------
+Feedback and Contribution
+-------------------------
 
 I'd appreciate any feedback you might give (both positive and negative). Feel fee to [create a new issue](https://github.com/vfarcic/docker-flow/issues), send a pull request, or tell me about any feature you might be missing. You can find my contact information in the [About](http://technologyconversations.com/about/) section of my [blog](http://technologyconversations.com/).
