@@ -1,9 +1,14 @@
 Docker Flow
 ===========
 
+* [Introduction](#introduction)
+
+Introduction
+------------
+
 *Docker Flow* is a project aimed towards creating an easy to use continuous deployment flow. It uses [Docker Engine](https://www.docker.com/products/docker-engine), [Docker Compose](https://www.docker.com/products/docker-compose), and [Consul](https://www.consul.io/).
 
-For information regarding features and motivations behind this project, please read the [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) article.
+The goal of the project is to add features and processes that are currently missing inside the Docker ecosystem. The project, at the moment, solves the problems of blue-green deployments, relative scaling, and proxy service discovery and reconfiguration. Many additional features will be added soon.
 
 The current list of features is as follows.
 
@@ -36,78 +41,15 @@ cd docker-flow
 
 Before proceeding further, please download the [latest release](https://github.com/vfarcic/docker-flow/releases) to the *docker-flow* directory and make it executable.
 
-We'll start by creating a server that will host Consul and Proxy. Later on we'll' proceed with a Swarm cluster consisting of three nodes.
+We'll start by creating a server that will host Consul and Proxy as well as a Swarm cluster consisting of three nodes. As you'll see soon, the proxy will be provisioned automatically so for the first server, we only need to create the machine and run Consul. In order to focus on the *Docker Flow* features, we'll skip explaining all the commands required for the setup of those four servers. If you are interested in those details, please explore the [setup.sh](https://github.com/vfarcic/docker-flow/blob/master/setup.sh) script.
 
-As you'll see soon, the proxy will be provisioned automatically so for the first server, we only need to create the machine and run Consul.
+Please run the following commands.
 
-TODO: Start change to script
-
-```sh
-docker-machine create -d virtualbox proxy
-
-export CONSUL_IP=$(docker-machine ip proxy)
-
-export PROXY_IP=$(docker-machine ip proxy)
-
-eval "$(docker-machine env proxy)"
-
-docker-compose -f docker-compose-setup.yml \
-    up -d consul
 ```
+chmod +x setup.sh
 
-We created the machine called *proxy*, created an environment variable *CONSUL_IP* (we'll use it later), and run the target *consul* defined in the *docker-compose-setup.yml* file.
-
-Now that we have the proxy server with *Consul*, we can create the Swarm cluster.
-
-```sh
-docker-machine create -d virtualbox \
-    --swarm --swarm-master \
-    --swarm-discovery="consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-advertise=eth1:2376" \
-    swarm-master
-
-docker-machine create -d virtualbox \
-    --swarm \
-    --swarm-discovery="consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-advertise=eth1:2376" \
-    swarm-node-1
-
-docker-machine create -d virtualbox \
-    --swarm \
-    --swarm-discovery="consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-store=consul://$CONSUL_IP:8500" \
-    --engine-opt="cluster-advertise=eth1:2376" \
-    swarm-node-2
+./setup.sh
 ```
-
-Now that the Swarm cluster is up and running, the only thing left is to run *Registrator* on all three machines.
-
-```sh
-eval "$(docker-machine env swarm-master)"
-
-export DOCKER_IP=$(docker-machine ip swarm-master)
-
-docker-compose -f docker-compose-setup.yml \
-    up -d registrator
-
-eval "$(docker-machine env swarm-node-1)"
-
-export DOCKER_IP=$(docker-machine ip swarm-node-1)
-
-docker-compose -f docker-compose-setup.yml \
-    up -d registrator
-
-eval "$(docker-machine env swarm-node-2)"
-
-export DOCKER_IP=$(docker-machine ip swarm-node-2)
-
-docker-compose -f docker-compose-setup.yml \
-    up -d registrator
-```
-
-TODO: End change to script
 
 Let's take a look at the state of our Swarm cluster.
 
@@ -132,7 +74,7 @@ ed3bf310d9c5        gliderlabs/registrator   "/bin/registrator -ip"   14 minutes
 
 As you can see, all three Swarm nodes are running *Registrator* and *Swarm Node* container. On top of that we have *Swarm Master* running on the main server.
 
-Aside from the Swarm cluster, we have a lone server called *proxy* running, at the moment, only Consul.
+Aside from the Swarm cluster, we have a lone server called *proxy* that is, at the moment, running only Consul.
 
 ```bash
 eval "$(docker-machine env proxy)"
