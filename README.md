@@ -3,8 +3,8 @@ Docker Flow
 
 * [Introduction](#introduction)
 * [Examples](#examples)
-* [Arguments](#arguments)
-* [Feedback and Contribution](#feedback-and-ontribution)
+* [Usage](#usage)
+* [Feedback and Contribution](#feedback-and-contribution)
 
 Introduction
 ------------
@@ -314,8 +314,8 @@ After the tests are run, we have two paths we can take. If one of the tests fail
     --flow=stop-old
 ```
 
-Arguments
----------
+Usage
+-----
 
 Arguments can be specified through *docker-flow.yml* file, environment variables, and command line arguments. If the same argument is specified in several places, command line overwrites all others and environment variables overwrite *docker-flow.yml*.
 
