@@ -1,3 +1,6 @@
+env:
+  - VERSION=0.9
+
 language: go
 
 before_install:
@@ -8,7 +11,7 @@ script:
   - go test -v ./...
 after_success:
   - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
-  - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v0.1.1 dist/
+  - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v${VERSION} dist/
 
 branches:
   only:
