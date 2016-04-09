@@ -44,7 +44,7 @@ cd docker-flow
 
 Before proceeding further, download the [latest release](https://github.com/vfarcic/docker-flow/releases) to the *docker-flow* directory and make it executable.
 
-We'll start by creating a server that will host Consul and Proxy as well as a Swarm cluster consisting of three nodes. As you'll see soon, the proxy will be provisioned automatically so for the first server, we only need to create the machine and run Consul. In order to focus on the *Docker Flow* features, we'll skip explaining all the commands required for the setup of those four servers. If you are interested in those details, please explore the [setup.sh](https://github.com/vfarcic/docker-flow/blob/master/setup.sh) script.
+We'll start by creating a server that will host Consul and Proxy as well as a Swarm cluster consisting of three nodes. As you'll see soon, the proxy will be provisioned automatically so, for the first server, we only need to create the machine and run Consul. We'll skip the explanation all the commands required for the setup of those four servers, and focus on the *Docker Flow* features. If you are interested in setup details, please explore the [setup.sh](https://github.com/vfarcic/docker-flow/blob/master/setup.sh) script.
 
 Please run the following commands.
 
@@ -96,7 +96,7 @@ With the cluster and the proxy server set up, we are ready to give **Docker Flow
 
 ### Reconfiguring proxy after deployment
 
-*Proxy* flow requires Consul address as well as the information about the node the proxy is (or will be) running on. *Docker Flow* allows three ways to provide necessary information. We can define arguments inside the *docker-flow.yml* file, as environment variables, and, finally, as command line arguments. In this example, we'll all three input methods so that you can get familiar with them and choose the combination that suits you needs.
+*Proxy* flow requires Consul address as well as the information about the node the proxy is (or will be) running on. *Docker Flow* allows three ways to provide necessary information. We can define arguments inside the *docker-flow.yml* file, as environment variables, or as command line arguments. In this example, we'll use all three input methods so that you can get familiar with them and choose the combination that suits you needs.
 
 Let's start by defining proxy and Consul data through environment variables.
 
@@ -144,7 +144,7 @@ swarm-node-1/books-ms-db             mongo
 ...
 ```
 
-*Docker Flow* run our main target *app* together with the side target named *books-ms-db*. Both targets are defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml). Container names depend on many different factors, some of which are the Docker Compose project (defaults to the current directory as in case of the *app* target) or can be specified inside the *docker-compose.yml* through the `container_name` argument as in the case of the *db* target). The first difference you'll notice is that *Docker Flow* added *blue* to the container name. The reason behind that is in the `--blue-green` argument. If present, *Docker Flow* will use the *blue-green* process to run the main target. If you are unfamiliar with the process, please read the [Blue-Green Deployment](http://technologyconversations.com/2016/02/08/blue-green-deployment/) article for general information and [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) for more detailed explanation within the *Docker Flow* context.
+*Docker Flow* run our main target *app* together with the side target named *books-ms-db*. Both targets are defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml). Container names depend on many different factors, some of which are the Docker Compose project (defaults to the current directory as in the case of the *app* target) or can be specified inside the *docker-compose.yml* through the `container_name` argument as in the case of the *db* target). The first difference you'll notice is that *Docker Flow* added *blue* to the container name. The reason behind that is in the `--blue-green` argument. If present, *Docker Flow* will use the *blue-green* process to run the primary target. If you are unfamiliar with the process, please read the [Blue-Green Deployment](http://technologyconversations.com/2016/02/08/blue-green-deployment/) article for general information and [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/) for a more detailed explanation within the *Docker Flow* context.
 
 Let's take a look at the *proxy* node as well.
 
@@ -164,7 +164,7 @@ consul              progrium/consul
 
 *Docker Flow* detected that there was no *proxy* on that node and run it for us. The *docker-flow-proxy* container contains *HAProxy* together with custom code that reconfigures it every time a new service is run. For more information about the *Docker Flow: Proxy*, please read the [project README](https://github.com/vfarcic/docker-flow-proxy).
 
-Since we instructed Swarm to run our service somewhere inside the cluster, we could not know in advance which server will be chosen. In this particular case, our service ended up running inside the *swarm-node-2*. Moreover, in order to avoid potential conflicts and allow easier scaling, we did not specify which port the service should expose. In other words, both the IP and the port of the service were not defined in advance. Among other things, *Docker Flow* solves this by running *Docker Flow: Proxy* and instructing it to reconfigure itself with the information gathered after the container is run. We can confirm that the proxy reconfiguration was indeed successful by sending an HTTP request to the newly deployed service.
+Since we instructed Swarm to run our service somewhere inside the cluster, we could not know in advance which server will be chosen. In this particular case, our service ended up running inside the *swarm-node-2*. Moreover, to avoid potential conflicts and allow easier scaling, we did not specify which port the service should expose. In other words, both the IP and the port of the service were not defined in advance. Among other things, *Docker Flow* solves this by running *Docker Flow: Proxy* and instructing it to reconfigure itself with the information gathered after the container is run. We can confirm that the proxy reconfiguration was indeed successful by sending an HTTP request to the newly deployed service.
 
 ```bash
 curl -I $PROXY_IP/api/v1/books
@@ -185,7 +185,7 @@ Even though our service is running in one of the servers chosen by Swarm and is 
 
 ### Deploying a new release without downtime
 
-Let's imagine that we want to deploy a new release of the service. We do not want to have any downtime so we'll continue using the *blue-green* process. Since the current release is *blue*, the new one will be named *green*. Downtime will be avoided by running the new release (*green*) in parallel with the old one (*blue*) and after it is fully up and running, reconfigure the proxy so that all requests are sent to the new release. Only after the proxy is reconfigured, we want the old release to stop running and release the resources it was using. We can accomplish all that by running a `docker-flow` command. However, this time we'll leverage the [docker-flow.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-flow.yml) file that already has some of the arguments we used before.
+Let's imagine that we want to deploy a new release of the service. We do not want to have any downtime so we'll continue using the *blue-green* process. Since the current release is *blue*, the new one will be named *green*. Downtime will be avoided by running the new release (*green*) in parallel with the old one (*blue*) and after it is fully up and running, reconfigure the proxy so that all requests are sent to the new release. Only after the proxy is reconfigured, we want the old release to stop running and release the resources it was using. We can accomplish all that by running a `docker-flow` command. However, this time, we'll leverage the [docker-flow.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-flow.yml) file that already has some of the arguments we used before.
 
 The content of the [docker-flow.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-flow.yml) is as follows.
 
@@ -223,7 +223,7 @@ swarm-node-1/books-ms-db              mongo                    Up About an hour
 ...
 ```
 
-From the output we can observe that the new release (*green*) is running and that the old (*blue*) was stopped. The reason why the old release was only stopped and not fully removed lies in potential need to quickly roollback in case a problem is discovered at some later moment in time.
+From the output, we can observe that the new release (*green*) is running and that the old (*blue*) was stopped. The reason the old release was only stopped and not entirely removed lies in potential need to quickly roollback in case a problem is discovered at some later moment in time.
 
 Let's confirm that the proxy was reconfigured as well.
 
@@ -275,7 +275,7 @@ The number of instances was increased by two. While only one instance was runnin
 
 Similarly, the proxy was reconfigured as well and, from now on, it will load balance all requests between those three instances.
 
-We can use the same method to de-scale the number of instances by prefixing the value of the `--scale` argument with the minus sign (*-*). Following the same example, when the traffic returns to normal, we can de-scale by number of instances to the original number by running the following command.
+We can use the same method to de-scale the number of instances by prefixing the value of the `--scale` argument with the minus sign (*-*). Following the same example, when the traffic returns to normal, we can de-scale the number of instances to the original amount by running the following command.
 
 ```bash
 ./docker-flow \
@@ -285,9 +285,9 @@ We can use the same method to de-scale the number of instances by prefixing the 
 
 ### Testing deployments to production
 
-The major downside of the proxy examples we run by now is inability to verify the release before reconfiguring the proxy. Ideally, we should use the blue-green process to deploy the new release in parallel with the old one, run a set of tests that validate that everything is working as expected, and, finally, reconfigure the proxy only if all tests were successful. We can accomplish that easily by running `docker-flow` twice.
+The major downside of the proxy examples we run by now is the inability to verify the release before reconfiguring the proxy. Ideally, we should use the blue-green process to deploy the new release in parallel with the old one, run a set of tests that validate that everything is working as expected, and, finally, reconfigure the proxy only if all tests were successful. We can accomplish that easily by running `docker-flow` twice.
 
-> There are many tools that aim at providing zero-downtime deployments but only a few of them (if any), take into account that a set of tests should be run before the proxy is reconfigured.
+> Many tools aim at providing zero-downtime deployments but only a few of them (if any), take into account that a set of tests should be run before the proxy is reconfigured.
 
 First, we should deploy the new version.
 
@@ -310,9 +310,9 @@ swarm-node-2/dockerflow_app-blue_1    Up 5 minutes        192.168.99.103:32770->
 swarm-node-1/dockerflow_app-green_1   Up About an hour    192.168.99.102:32768->8080/tcp
 ```
 
-At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to the old release. What this means is that the users of our service are still seeing the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
+At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to the old release. What this means is that the users of our service still see the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
 
-After the tests are run, we have two paths we can take. If one of the tests failed, we can just stop the new release and fix the problem. Since the proxy is still redirecting all requests to the old release, our users were not affected by this failure and we can dedicate our time towards fixing the problem. On the other hand, if all tests were successful, we can run the rest of the *flow* that will reconfigure the proxy and stop the old release.
+After the tests are run, we have two paths we can take. If one of the tests failed, we can just stop the new release and fix the problem. Since the proxy is still redirecting all requests to the old release, our users were not affected by this failure, and we can dedicate our time towards fixing the problem. On the other hand, if all tests were successful, we can run the rest of the *flow* that will reconfigure the proxy and stop the old release.
 
 ```bash
 ./docker-flow \
@@ -320,12 +320,12 @@ After the tests are run, we have two paths we can take. If one of the tests fail
     --flow=stop-old
 ```
 
-This concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
+That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
 
 Usage
 -----
 
-Arguments can be specified through *docker-flow.yml* file, environment variables, and command line arguments. If the same argument is specified in several places, command line overwrites all others and environment variables overwrite *docker-flow.yml*.
+Arguments can be specified through *docker-flow.yml* file, environment variables, and command line arguments. If the same argument is specified in several places, command line overwrites all others, and environment variables overwrite *docker-flow.yml*.
 
 ### Command line arguments
 
