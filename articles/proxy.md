@@ -4,9 +4,9 @@ The goal of the project is to add features and processes that are currently miss
 
 The current list of features is as follows.
 
-* Blue-green deployment
-* Relative scaling
-* Proxy reconfiguration
+* **Blue-green deployment**
+* **Relative scaling**
+* **Proxy reconfiguration**
 
 The latest release can be found [here](https://github.com/vfarcic/docker-flow/releases/latest).
 
@@ -429,4 +429,6 @@ From the users perspective, all new requests are redirected to the new release.
 
 ![Users requests are redirected to the new release](img/proxy-user.png)
 
-That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
+That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](https://github.com/vfarcic/docker-flow#usage) section for more details.
+
+Even if you choose not to use [Docker Flow](https://github.com/vfarcic/docker-flow), the process explained in this article is useful and represents some of the best practices applied to container running inside a cluster.

@@ -21,16 +21,14 @@ The current list of features is as follows.
 
 The latest release can be found [here](https://github.com/vfarcic/docker-flow/releases/latest).
 
+> For a detailed explanation of features, walkthrough, and examples, please read the **[TODO](TODO)* article.
+
 Examples
 --------
 
-More detailed examples and walkthrough can be found in the following articles:
-
-* [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/)
-
 The examples that follow will use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way.
 
-Please note that the examples presented below have been tested on OS X and Linux. In case you are a Windows user, you might want to explore the OS agnostic examples provided in the before mentioned articles.
+Please note that the examples presented below have been tested on OS X and Linux. In case you are a Windows user, you might want to explore the OS agnostic examples provided in the [TODO](TODO) article.
 
 ### Setting it up
 
