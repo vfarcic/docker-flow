@@ -86,7 +86,7 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("The request to reconfigure the proxy failed\n%s\n", err.Error())
+		return fmt.Errorf("The response from the proxy was incorrect\n%s\n", err.Error())
 	}
 	return nil
 }

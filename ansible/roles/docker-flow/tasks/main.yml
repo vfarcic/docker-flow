@@ -8,9 +8,13 @@
   file:
     path: /books-ms
     state: directory
+    owner: vagrant
 
 - name: Sample docker-compose.yml is present
   get_url:
-    url: https://raw.githubusercontent.com/vfarcic/docker-flow/master/docker-compose.yml
-    dest: /books-ms/docker-compose.yml
+    url: "https://raw.githubusercontent.com/vfarcic/docker-flow/master/{{ item }}"
+    dest: "/books-ms/{{ item }}"
     mode: 0644
+  with_items:
+    - docker-compose.yml
+    - docker-flow.yml

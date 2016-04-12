@@ -24,7 +24,7 @@ The latest release can be found [here](https://github.com/vfarcic/docker-flow/re
 Examples
 --------
 
-More detailed examples can be found in the following articles:
+More detailed examples and walkthrough can be found in the following articles:
 
 * [Docker Flow: Blue-Green Deployment and Relative Scaling](http://technologyconversations.com/2016/03/07/docker-flow-blue-green-deployment-and-relative-scaling/)
 
@@ -279,7 +279,7 @@ We can use the same method to de-scale the number of instances by prefixing the 
 
 ```bash
 ./docker-flow \
-    --scale="-2" \
+    --scale="-1" \
     --flow=scale --flow=proxy
 ```
 
@@ -307,10 +307,14 @@ The output of the `ps` command is as follows.
 ```
 NAMES                                 STATUS              PORTS
 swarm-node-2/dockerflow_app-blue_1    Up 5 minutes        192.168.99.103:32770->8080/tcp
+swarm-node-1/dockerflow_app-blue_2    Up 5 minutes        192.168.99.102:32773->8080/tcp
 swarm-node-1/dockerflow_app-green_1   Up About an hour    192.168.99.102:32768->8080/tcp
+swarm-node-2/dockerflow_app-green_2   Up About an hour    192.168.99.103:32763->8080/tcp
 ```
 
-At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to the old release. What this means is that the users of our service still see the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
+At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to all the instances of the old release. What this means is that the users of our service still see the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
+
+> Please note that even though we did not specify the number of instances that should be deployed, *Docker Flow* deployed the new release and scaled it to the same number of instances as we had before.
 
 After the tests are run, we have two paths we can take. If one of the tests failed, we can just stop the new release and fix the problem. Since the proxy is still redirecting all requests to the old release, our users were not affected by this failure, and we can dedicate our time towards fixing the problem. On the other hand, if all tests were successful, we can run the rest of the *flow* that will reconfigure the proxy and stop the old release.
 

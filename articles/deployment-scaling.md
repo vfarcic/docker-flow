@@ -47,7 +47,7 @@ services:
       - SERVICE_NAME=books-ms-db
 ```
 
-As you can see, it does not contain anything special. It has two targets. The *app* target defines the main container of the server. The *db* is a "side" target required by the *app*. Since the version is *2*, Docker Compose will utilize one of its new features and create a network around those targets allowing containers to communicate with each others (handy if deployed to a cluster). Finally, the *app* image uses the *BOOKS_MS_VERSION* environment variable hich will enable us to simulate multiple releases. I assume that you already used Docker Compose and that there is no reason to go into more details.
+As you can see, it does not contain anything special. It has two targets. The *app* target defines the main container of the server. The *db* is a "side" target required by the *app*. Since the version is *2*, Docker Compose will utilize one of its new features and create a network around those targets allowing containers to communicate with each others (handy if deployed to a cluster). Finally, the *app* image uses the *BOOKS_MS_VERSION* environment variable which will enable us to simulate multiple releases. I assume that you already used Docker Compose and that there is no reason to go into more details.
 
 We'll use *docker-machine* to create a VM that will simulate our production environment.
 
