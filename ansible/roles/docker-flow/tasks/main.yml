@@ -1,0 +1,16 @@
+- name: Executable is present
+  get_url:
+    url: https://github.com/vfarcic/docker-flow/releases/download/v0.9/docker-flow_linux_amd64
+    dest: /usr/local/bin/docker-flow
+    mode: 0755
+
+- name: Sample sample source code is present
+  file:
+    path: /books-ms
+    state: directory
+
+- name: Sample docker-compose.yml is present
+  get_url:
+    url: https://raw.githubusercontent.com/vfarcic/docker-flow/master/docker-compose.yml
+    dest: /books-ms/docker-compose.yml
+    mode: 0644

@@ -1,0 +1,4 @@
+ansible_ssh_private_key_file: /vagrant/.vagrant/machines/node-1/virtualbox/private_key
+swarm_master_ip: 10.100.192.200
+docker_extra: "-H tcp://0.0.0.0:2375 --cluster-store=consul://{{ consul_ip }}:8500/swarm --cluster-advertise={{ facter_ipaddress_eth1 }}:2375"
+

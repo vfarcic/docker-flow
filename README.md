@@ -96,7 +96,7 @@ With the cluster and the proxy server set up, we are ready to give **Docker Flow
 
 ### Reconfiguring proxy after deployment
 
-*Proxy* flow requires Consul address as well as the information about the node the proxy is (or will be) running on. *Docker Flow* allows three ways to provide necessary information. We can define arguments inside the *docker-flow.yml* file, as environment variables, or as command line arguments. In this example, we'll use all three input methods so that you can get familiar with them and choose the combination that suits you needs.
+*Docker Flow* requires the Consul address as well as the information about the node the proxy is (or will be) running on. It allows three ways to provide the necessary information. We can define arguments inside the *docker-flow.yml* file, as environment variables, or as command line arguments. In this example, we'll use all three input methods so that you can get familiar with them and choose the combination that suits you needs.
 
 Let's start by defining proxy and Consul data through environment variables.
 

@@ -66,7 +66,7 @@ var GetOpts = func() (Opts, error) {
 func ParseYml(opts *Opts) error {
 	data, err := readFile(dockerFlowPath)
 	if err != nil {
-		return fmt.Errorf("Could not read the Docker Flow file %s\n%v", dockerFlowPath, err)
+		return nil
 	}
 	if err = yaml.Unmarshal([]byte(data), opts); err != nil {
 		return fmt.Errorf("Could not parse the Docker Flow file %s\n%v", dockerFlowPath, err)

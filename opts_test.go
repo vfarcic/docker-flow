@@ -471,14 +471,14 @@ func (s OptsTestSuite) Test_ParseYml_ReturnsNil() {
 	s.Nil(actual)
 }
 
-func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenReadFileFails() {
+func (s OptsTestSuite) Test_ParseYml_ReturnsNil_WhenReadFileFails() {
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
 
 	actual := ParseYml(&s.opts)
 
-	s.Error(actual)
+	s.Nil(actual)
 }
 
 func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenUnmarshalFails() {
