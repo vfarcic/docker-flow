@@ -107,7 +107,7 @@ func ProcessOpts(opts *Opts) (err error) {
 	sc := getServiceDiscovery()
 	if len(opts.Project) == 0 {
 		dir, _ := getWd()
-		opts.Project = dir[strings.LastIndex(dir, "/") + 1:]
+		opts.Project = dir[strings.LastIndex(dir, string(os.PathSeparator)) + 1:]
 	}
 	if len(opts.Target) == 0 {
 		return fmt.Errorf("target argument is required")
