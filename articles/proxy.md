@@ -17,7 +17,7 @@ We'll start by exploring a typical Swarm cluster setup and discuss some of the p
 
 As a minimum, each node inside a Swarm cluster has to have [Docker Engine](https://www.docker.com/products/docker-engine) and with the [Swarm container](https://hub.docker.com/_/swarm/) running. That container should acts as a node. On top of those nodes, we need at least one Swarm container running as master and all Swarm nodes should announce their existence to it.
 
-A combination of Swarm master(s) and nodes is a minimal setup that, in most cases, is far from sufficient. Optimum utilization of a cluster means that we are not in control any more. Swarm is. It will decide which node is the most appropriate place for a container to run. That choice can be as simple as a node with the least number of container running or can be based on a more complex calculation that involves amount of available CPU and memory, type of hard disk, affinity, and so on. No matter that strategy we choose, the fact is that we will not know where will a container be run. On top of that, we should not specify ports our services should expose. "Hard-coded" ports reduce our ability to scale services and can result in conflicts (after all, two separate processes cannot listen to the same port). Long story short, once we adopt Swarm, both IPs and ports of our services will become unknown. So, the next step in setting up a Swarm cluster is to create a mechanism that will detect deployed services and store their information in a distributed registry so that the information is easily available.
+A combination of Swarm master(s) and nodes are a minimal setup that, in most cases, is far from sufficient. Optimum utilization of a cluster means that we are not in control any more. Swarm is. It will decide which node is the most appropriate place for a container to run. That choice can be as simple as a node with the least number of container running or can be based on a more complex calculation that involves amount of available CPU and memory, type of hard disk, affinity, and so on. No matter that strategy we choose, the fact is that we will not know where a container will be run. On top of that, we should not specify ports our services should expose. "Hard-coded" ports reduce our ability to scale services and can result in conflicts (after all, two separate processes cannot listen to the same port). Long story short, once we adopt Swarm, both IPs and ports of our services will become unknown. So, the next step in setting up a Swarm cluster is to create a mechanism that will detect deployed services and store their information in a distributed registry so that the information is easily available.
 
 [Registrator](https://github.com/gliderlabs/registrator) is one of the tools that we can use to monitor Docker Engine events and send the information about deployed or stopped containers to a service registry. While there are many different service registries we can use, [Consul](https://www.consul.io/) proved to be, currently, the best one. Please read the [Service Discovery: Zookeeper vs etcd vs Consul](https://technologyconversations.com/2015/09/08/service-discovery-zookeeper-vs-etcd-vs-consul/) article for more information.
 
@@ -30,7 +30,7 @@ Please note that anything but a small cluster would have multiple Swarm masters 
 The process of deploying containers, in such a setup, is as follows.
 
 * Operator sends a request to *Swarm master* to deploy a service consisting of one or multiple containers. This request can be sent through *Docker CLI* by defining the *DOCKER_HOST* environment variable with the IP and the port of the *Swarm master*.
-* Depending on criteria sent in the request (CPU, memory, affinity, and so on), *Swarm master* makes the decision where to run the containers and sends sends requests chosen *Swarm nodes*.
+* Depending on criteria sent in the request (CPU, memory, affinity, and so on), *Swarm master* makes the decision where to run the containers and sends requests chosen *Swarm nodes*.
 * *Swarm node*, upon receiving the request to run (or stop) a container invokes local *Docker Engine* which, in turn, runs (or stops) the desired container and publishes the result as an event.
 * *Registrator* monitors *Docker Engine* and, upon detecting a new event, sends the information to *Consul*.
 * Anyone interested in data about containers running inside the cluster can consul *Consul*.
@@ -47,9 +47,9 @@ Deploying Without Downtime
 
 When a new release is pulled, running `docker-compose up` will stop the containers running the old release and run the new one in their place. The problem with that approach is downtime. Between stopping the old release and running the new in its place, there a downtime. No matter whether it is one millisecond or a full minute, a new container needs to start and the service inside it needs to initialize.
 
-We can solve this by setting up a proxy and health check. However, that would still require that you run multiple instances of the service (as you definitelly should). The process would be to stop one instance and bring the new release in its place. During the downtime of that instance, proxy would redirect the requests to one of the other instances. Then, when the first instance is running the new release and the service inside it is initialized, you would continue repeating the process with the other instances. This process can become very complicated, and would prevent you from using Docker Compose *scale* command.
+We can solve this by setting up a proxy and health check. However, that would still require that you run multiple instances of the service (as you definitely should). The process would be to stop one instance and bring the new release in its place. During the downtime of that instance, proxy would redirect the requests to one of the other instances. Then, when the first instance is running the new release and the service inside it is initialized, you would continue repeating the process with the other instances. This process can become very complicated, and would prevent you from using Docker Compose *scale* command.
 
-The better solution is to deploy new release using the *blue-green* deployment process. If you are unfamiliar with it, please read the [Blue-Green Deployment](https://technologyconversations.com/2016/02/08/blue-green-deployment/) article. In a nutshell, the process deploys the new release in parallel with the old one. Throughout the process, proxy should continue sending all requests to the old release. Once the deployment is finished and the service inside the container is initialized, proxy should be reconfigured to send all the request to the new release and the old one can be stopped.
+The better solution is to deploy new release using the *blue-green* deployment process. If you are unfamiliar with it, please read the [Blue-Green Deployment](https://technologyconversations.com/2016/02/08/blue-green-deployment/) article. In a nutshell, the process deploys the new release in parallel with the old one. Throughout the process, proxy should continue sending all requests to the old release. Once the deployment is finished and the service inside the container is initialized, proxy should be reconfigured to send all the requests to the new release and the old one can be stopped.
 
 Scaling Containers Using Relative Numbers
 -----------------------------------------
@@ -63,7 +63,7 @@ On top of the lack of relative scaling, *Docker Compose* does not know how to ma
 Proxy Reconfiguration After The New Release Is Tested
 -----------------------------------------------------
 
-The need for dynamic reconfiguration of the proxy becomes evident soon after we adopt microservices architecture. Containers allow us to pack them as immutable entities and Swarm lets us deploy them inside the cluster. The adoption of immutability through containers and cluster orchestrators like Swarm resulted in a huge increase in interest and adoption of microservices and, with them, decrease in deployment frequency. Unlike monolithic applications that forced us to deploy infrequently, now we can deploy often. Even if you do not adopt continuous deployment (each commit goes to production), you are likelly to start deploying your microservices more often. That might be once a week, once a day, or multiple times a day. No matter the frequency, there is a strong need to reconfigure the proxy every time a new release is deployed. Swarm will run containers somewhere inside the cluster and proxy needs to be reconfigured to redirect requests to all the instances of the new release. Proxy needs to be reconfigured dynamically. That means that there must be a process that retrieves information from the service registry, changes the configuration of the proxy and, finally, reload it.
+The need for dynamic reconfiguration of the proxy becomes evident soon after we adopt microservices architecture. Containers allow us to pack them as immutable entities and Swarm lets us deploy them inside the cluster. The adoption of immutability through containers and cluster orchestrators like Swarm resulted in a huge increase in interest and adoption of microservices and, with them, decrease in deployment frequency. Unlike monolithic applications that forced us to deploy infrequently, now we can deploy often. Even if you do not adopt continuous deployment (each commit goes to production), you are likely to start deploying your microservices more often. That might be once a week, once a day, or multiple times a day. No matter the frequency, there is a strong need to reconfigure the proxy every time a new release is deployed. Swarm will run containers somewhere inside the cluster and proxy needs to be reconfigured to redirect requests to all the instances of the new release. Proxy needs to be reconfigured dynamically. That means that there must be a process that retrieves information from the service registry, changes the configuration of the proxy and, finally, reload it.
 
 There are several commonly used approaches to this problem.
 
@@ -76,7 +76,7 @@ We can incorporate tools like [Consul Template](https://github.com/hashicorp/con
 Solving The Problems
 --------------------
 
-[Docker Flow](https://github.com/vfarcic/docker-flow) is the project that solves the problems we discussed. It's goal is to provide features that are not currently available in Docker's ecosystem. It does not replace any of the ecosystem's features, but builds on top of them.
+[Docker Flow](https://github.com/vfarcic/docker-flow) is the project that solves the problems we discussed. Its goal is to provide features that are not currently available in Docker's ecosystem. It does not replace any of the ecosystem's features, but builds on top of them.
 
 Docker Flow Walkthrough
 =======================
@@ -98,7 +98,7 @@ git clone https://github.com/vfarcic/docker-flow.git
 cd docker-flow
 ```
 
-With the code downloaded, we can run Vagrant and create the cluster we'll use throughout the the of this article.
+With the code downloaded, we can run Vagrant and create the cluster we'll use throughout this article.
 
 ```bash
 vagrant plugin install vagrant-cachier
@@ -145,7 +145,7 @@ export DOCKER_HOST=tcp://master:2375
 export BOOKS_MS_VERSION=":latest"
 ```
 
-The *FLOW_PROXY_HOST* variable is the IP of the host where the proxy is running while the *FLOW_CONSUL_ADDRESS* represents the full address of the Consul API. The *FLOW_PROXY_DOCKER_HOST* is the host of the Docker Engine running on the server with the proxy. The last variable (*DOCKER_HOST*) is the address of the *Swarm master*. Even though, in this example, we're running *Consul*, *proxy*, and *Swarm master* on the same server, *Docker Flow* is designed to run operations on multiple servers at the same time so we need to provide it with all the information it needs to do its tasks. In the examples we are exploring, it will deploy containers on the Swarm cluster, use Consul instance to store and retrieve information, and reconfigure the proxy every time a new service is deployed. Finally, we set the environment variable *BOOKS_MS_VERSION* to *latest*. The *docker-compose.yml* that we'll use uses it do determine which version we want to run.
+The *FLOW_PROXY_HOST* variable is the IP of the host where the proxy is running while the *FLOW_CONSUL_ADDRESS* represents the full address of the Consul API. The *FLOW_PROXY_DOCKER_HOST* is the host of the Docker Engine running on the server with the proxy. The last variable (*DOCKER_HOST*) is the address of the *Swarm master*. Even though, in this example, we're running *Consul*, *proxy*, and *Swarm master* on the same server, *Docker Flow* is designed to run operations on multiple servers at the same time so we need to provide it with all the information it needs to do its tasks. In the examples we are exploring, it will deploy containers on the Swarm cluster, use Consul instance to store and retrieve information, and reconfigure the proxy every time a new service is deployed. Finally, we set the environment variable *BOOKS_MS_VERSION* to *latest*. The *docker-compose.yml* that we'll use uses it to determine which version we want to run.
 
 Now we are ready to deploy the first release of our sample service.
 
@@ -158,7 +158,7 @@ docker-flow \
     --flow=deploy --flow=proxy
 ```
 
-We instructed `docker-flow` to use the *blue-green deployment* process and that the target (defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml)) is *app*. We also told it that the service exposes an API on the address */api/v1/books* and that it requires a side (or secondary) target *db*. Finally, through the `--flow` arguments we specified that the we want it to deploy the targets and reconfigure the proxy. A lot happened in that single command so we'll explore the result in more detail.
+We instructed `docker-flow` to use the *blue-green deployment* process and that the target (defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml)) is *app*. We also told it that the service exposes an API on the address */api/v1/books* and that it requires a side (or secondary) target *db*. Finally, through the `--flow` arguments we specified that we want it to deploy the targets and reconfigure the proxy. A lot happened in that single command so we'll explore the result in more detail.
 
 Let's take a look at our servers and see what happened. We'll start with the Swarm cluster.
 
@@ -269,7 +269,7 @@ node-1/books-ms-db           mongo                    Up 41 minutes
 ...
 ```
 
-From the output, we can observe that the new release (*green*) is running and that the old (*blue*) was stopped. The reason the old release was only stopped and not entirely removed lies in potential need to quickly roollback in case a problem is discovered at some later moment in time.
+From the output, we can observe that the new release (*green*) is running and that the old (*blue*) was stopped. The reason the old release was only stopped and not entirely removed lies in potential need to quickly rollback in case a problem is discovered at some later moment in time.
 
 Let's confirm that the proxy was reconfigured as well.
 
@@ -349,7 +349,7 @@ The flow of the events was as follows.
 
 ![Relative scaling through Docker Flow](img/scaling-flow.png)
 
-From the users perspective, they continue receiving responses from the current release but, this time, their requests are load balanced among all instances of the service. As a result, service performance is improved.
+From the users’ perspective, they continue receiving responses from the current release but, this time, their requests are load balanced among all instances of the service. As a result, service performance is improved.
 
 ![Users requests are load balanced across all instances of the service](img/scaling-user.png)
 
@@ -402,7 +402,7 @@ The flow of the events was as follows.
 
 ![Deployment without reconfiguring proxy](img/deployment-without-proxy-flow.png)
 
-From the users perspective, they continue receiving responses from the current release since we did not specify that we want to reconfigure the proxy.
+From the users’ perspective, they continue receiving responses from the current release since we did not specify that we want to reconfigure the proxy.
 
 ![Users requests are still redirected to the old release](img/deployment-without-proxy-user.png)
 
