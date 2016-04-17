@@ -16,6 +16,7 @@ Vagrant.configure(2) do |config|
     d.vm.provision :shell, inline: "PYTHONUNBUFFERED=1 ansible-playbook /vagrant/ansible/swarm.yml -i /vagrant/ansible/hosts/prod"
     d.vm.provider "virtualbox" do |v|
       v.memory = 1024
+      v.linked_clone = true if Vagrant::VERSION =~ /^1.8/
     end
   end
   config.vm.define "master" do |d|
@@ -24,6 +25,7 @@ Vagrant.configure(2) do |config|
     d.vm.network "private_network", ip: "10.100.192.200"
     d.vm.provider "virtualbox" do |v|
       v.memory = 1024
+      v.linked_clone = true if Vagrant::VERSION =~ /^1.8/
     end
   end
   (1..2).each do |i|
@@ -33,6 +35,7 @@ Vagrant.configure(2) do |config|
       d.vm.network "private_network", ip: "10.100.192.20#{i}"
       d.vm.provider "virtualbox" do |v|
         v.memory = 1024
+        v.linked_clone = true if Vagrant::VERSION =~ /^1.8/
       end
     end
   end
