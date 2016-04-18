@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"strconv"
+	"path/filepath"
 )
 
 // Setup
@@ -29,6 +30,7 @@ func (s *OptsTestSuite) SetupTest() {
 	}
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	path := fmt.Sprintf("/some/path/%s", s.dir)
+	path = filepath.FromSlash(path)
 	getWd = func() (string, error) {
 		return path, nil
 	}
