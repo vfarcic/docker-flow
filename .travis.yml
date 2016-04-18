@@ -10,8 +10,8 @@ before_install:
 script:
   - go test -v ./...
 after_success:
-  - gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
-  - ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v${VERSION} dist/
+  - [ "${TRAVIS_PULL_REQUEST}" = "false" ] && gox -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" || false
+  - [ "${TRAVIS_PULL_REQUEST}" = "false" ] && ghr --username vfarcic --token $GITHUB_TOKEN --replace --debug v${VERSION} dist/ || false
 
 branches:
   only:
