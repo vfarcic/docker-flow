@@ -310,7 +310,8 @@ Only after the deployment is finished, HAProxy was reconfigured, and users were 
 
 Now that we have a safe way to deploy new releases, let us turn our attention to relative scaling.
 
-### Scaling the service
+Scaling the service
+-------------------
 
 One of the great benefits *Docker Compose* provides is scaling. We can use it to scale to any number of instances. However, it allows only absolute scaling. We cannot instruct *Docker Compose* to apply relative scaling. That makes the automation of some of the processes difficult. For example, we might have an increase in traffic that requires us to increase the number of instances by two. In such a scenario, the automation script would need to obtain the number of instances that are currently running, do some simple math to get to the desired number, and pass the result to Docker Compose. On top of all that, proxy still needs to be reconfigured as well. *Docker Flow* makes this process much easier.
 

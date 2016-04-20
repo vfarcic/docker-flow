@@ -8,6 +8,11 @@ services:
     environment:
       - SERVICE_NAME=books-ms
       - DB_HOST=books-ms-db
+    networks:
+      default: {}
+      backend:
+        aliases:
+          - books-ms
     depends_on:
       - db
 
@@ -16,3 +21,8 @@ services:
     image: mongo
     environment:
       - SERVICE_NAME=books-ms-db
+
+networks:
+  backend:
+    external:
+      name: backend
