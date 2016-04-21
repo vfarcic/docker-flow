@@ -1,5 +1,3 @@
-https://blog.docker.com/2016/04/docker-engine-1-11-runc/
-
 Docker Networking and DNS: The Good, The Bad, And The Ugly
 ==========================================================
 
