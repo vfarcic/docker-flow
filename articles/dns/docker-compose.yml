@@ -1,16 +1,20 @@
 version: '2'
 
+networks:
+  be:
+    external:
+      name: backend
+
 services:
   app:
-    image: vfarcic/books-ms${BOOKS_MS_VERSION}
+    image: vfarcic/books-ms
     ports:
       - 8080
     environment:
-      - SERVICE_NAME=books-ms
       - DB_HOST=books-ms-db
     networks:
       default: {}
-      backend:
+      be:
         aliases:
           - books-ms
     depends_on:
@@ -21,8 +25,3 @@ services:
     image: mongo
     environment:
       - SERVICE_NAME=books-ms-db
-
-networks:
-  backend:
-    external:
-      name: backend
