@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const dockerComposeFlowPath  = "docker-compose-flow.yml.tmp"
+const dockerComposeFlowPath = "docker-compose-flow.yml.tmp"
 
 var dockerCompose DockerComposable = DockerCompose{}
 var getDockerCompose = func() DockerComposable {
@@ -14,7 +14,7 @@ var getDockerCompose = func() DockerComposable {
 }
 
 type DockerComposable interface {
-	CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error
+	CreateFlowFile(dcPath []string, serviceName, target string, sideTargets []string, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, certPath, project string, targets []string) error
 	UpTargets(host, certPath, project string, targets []string) error
@@ -25,24 +25,16 @@ type DockerComposable interface {
 
 type DockerCompose struct{}
 
-func (dc DockerCompose) CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error {
-	// TODO: Start remove
-	data, err := readFile(dcPath)
+func (dc DockerCompose) CreateFlowFile(dcPath []string, serviceName, target string, sideTargets []string, color string, blueGreen bool) error {
+	data, err := readFile(dcPath[0])
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)
 	}
-	s := string(data)
-	// TODO: End remove
 	extendedTarget := target
 	if blueGreen {
-		// TODO: Start remove
-		old := fmt.Sprintf("%s:", target)
-		new := fmt.Sprintf("%s-%s:", target, color)
-		s = strings.Replace(string(data), old, new, 1)
-		// TODO: End remove
 		extendedTarget = fmt.Sprintf("%s-%s", target, color)
 	}
-	s = ""
+	s := ""
 	dcData := strings.Trim(string(data), " ")
 	firstLine := strings.Split(dcData, "\n")[0]
 	indent := ""
@@ -66,7 +58,7 @@ services:`
 		extendedTarget,
 		indent,
 		indent,
-		dcPath,
+		dcPath[0],
 		indent,
 		target,
 		indent,
@@ -81,7 +73,7 @@ services:`
 			sideTarget,
 			indent,
 			indent,
-			dcPath,
+			dcPath[0],
 			indent,
 			sideTarget,
 		)
@@ -143,7 +135,7 @@ func (dc DockerCompose) StopTargets(host, certPath, project string, targets []st
 func (dc DockerCompose) getArgs(host, certPath, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
 	SetDockerHost(host, certPath)
-	if (len(project) > 0) {
+	if len(project) > 0 {
 		args = append(args, "-p", project)
 	}
 	return args

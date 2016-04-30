@@ -12,12 +12,12 @@ var writeFile = ioutil.WriteFile
 var removeFile = os.Remove
 var execCmd = exec.Command
 var SetDockerHost = func(host, certPath string) {
-	if (len(host) > 0) {
+	if len(host) > 0 {
 		os.Setenv("DOCKER_HOST", host)
 	} else {
 		os.Unsetenv("DOCKER_HOST")
 	}
-	if (len(certPath) > 0) {
+	if len(certPath) > 0 {
 		os.Setenv("DOCKER_CERT_PATH", certPath)
 	} else {
 		os.Unsetenv("DOCKER_CERT_PATH")

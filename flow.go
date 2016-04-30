@@ -19,6 +19,7 @@ const FLOW_PROXY = "proxy"
 type Flow struct{}
 
 var flow Flowable = Flow{}
+
 func getFlow() Flowable {
 	return flow
 }
@@ -58,7 +59,7 @@ func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 }
 
 func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error {
-	if (createFlowFile) {
+	if createFlowFile {
 		if err := dc.CreateFlowFile(
 			opts.ComposePath,
 			opts.ServiceName,
@@ -79,7 +80,7 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFil
 		return fmt.Errorf("The scale phase failed\n%s", err.Error())
 	}
 	sc.PutScale(opts.ServiceDiscoveryAddress, opts.ServiceName, scale)
-	if (createFlowFile) {
+	if createFlowFile {
 		if err := dc.RemoveFlow(); err != nil {
 			return err
 		}
@@ -97,7 +98,7 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 		return err
 	}
 	color := opts.CurrentColor
-	if (m.contains(opts.Flow, FLOW_DEPLOY)) {
+	if m.contains(opts.Flow, FLOW_DEPLOY) {
 		color = opts.NextColor
 	}
 	if err := proxy.Reconfigure(
@@ -113,7 +114,7 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 }
 
 func (m Flow) GetPullTargets(opts Opts) []string {
-	targets := make([]string, 0);
+	targets := make([]string, 0)
 	targets = append(targets, opts.NextTarget)
 	if opts.PullSideTargets {
 		targets = append(targets, opts.SideTargets...)

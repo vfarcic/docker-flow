@@ -1,10 +1,10 @@
 package main
 
 import (
-	"strconv"
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"strconv"
 	"strings"
 )
 

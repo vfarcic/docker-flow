@@ -1,15 +1,14 @@
 package main
 
 import (
-	"os/exec"
-	"os"
-	"fmt"
 	"bytes"
-	"strings"
+	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 )
-
 
 const containerStatusRunning = 1
 const containerStatusExited = 2
@@ -17,7 +16,8 @@ const containerStatusRemoved = 3
 const ProxyReconfigureDefaultPort = 8080
 
 var haProxy Proxy = HaProxy{}
-type HaProxy struct {}
+
+type HaProxy struct{}
 
 var runHaProxyRunCmd = runCmd
 var runHaProxyPsCmd = runCmd
@@ -71,7 +71,7 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 		address = fmt.Sprintf("http://%s", address)
 	}
 	colorQuery := ""
-	if (len(serviceColor) > 0) {
+	if len(serviceColor) > 0 {
 		colorQuery = fmt.Sprintf("&serviceColor=%s", serviceColor)
 	}
 	resp, err := httpGet(fmt.Sprintf(
@@ -135,7 +135,7 @@ func (m HaProxy) ps() (int, error) {
 
 func (m HaProxy) start() error {
 	logPrintln("Starting the docker-flow-proxy container...")
-	args := []string{ "start", "docker-flow-proxy" }
+	args := []string{"start", "docker-flow-proxy"}
 	cmd := exec.Command("docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

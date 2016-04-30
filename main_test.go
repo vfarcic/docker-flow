@@ -1,31 +1,31 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/suite"
-	"github.com/stretchr/testify/mock"
 	"fmt"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"os"
+	"testing"
 )
 
 type MainTestSuite struct {
 	suite.Suite
-	opts		Opts
-	dc			DockerComposable
+	opts Opts
+	dc   DockerComposable
 }
 
 func (s *MainTestSuite) SetupTest() {
 	s.opts = Opts{
-		ComposePath: "myComposePath",
-		Target: "myTarget",
-		NextColor: "orange",
-		CurrentColor: "pink",
-		NextTarget: "myNextTarget",
+		ComposePath:   []string{"myComposePath"},
+		Target:        "myTarget",
+		NextColor:     "orange",
+		CurrentColor:  "pink",
+		NextTarget:    "myNextTarget",
 		CurrentTarget: "myCurrentTarget",
-		BlueGreen: true,
-		Flow: []string{"deploy", "scale"},
+		BlueGreen:     true,
+		Flow:          []string{"deploy", "scale"},
 		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
-		ServiceName: "myServiceName",
+		ServiceName:             "myServiceName",
 	}
 	GetOpts = func() (Opts, error) {
 		return s.opts, nil
@@ -35,8 +35,8 @@ func (s *MainTestSuite) SetupTest() {
 	flow = getFlowMock("")
 	haProxy = getProxyMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
-	logFatal = func(v ...interface{}) { }
-	logPrintln = func(v ...interface{}) { }
+	logFatal = func(v ...interface{}) {}
+	logPrintln = func(v ...interface{}) {}
 	deployed = false
 }
 
@@ -328,10 +328,6 @@ func (s MainTestSuite) Test_Main_DoesNotRunStopOld_WhenStopOldAndNotBlueGreen() 
 		mock.Anything,
 	)
 }
-
-
-
-
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow_WhenStopOld() {
 	mockObj := getDockerComposeMock(s.opts, "")

@@ -1,10 +1,11 @@
 package main
+
 // TODO: Test
 
 import (
+	"fmt"
 	"log"
 	"strings"
-	"fmt"
 )
 
 func init() {
@@ -17,7 +18,7 @@ var logPrintln = log.Println
 var deployed = false
 
 func main() {
-//	createdFlow := false
+	//	createdFlow := false
 	flow := getFlow()
 	sc := getServiceDiscovery()
 

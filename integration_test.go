@@ -10,25 +10,25 @@ package main
 // TODO: Change books-ms for a "lighter" service
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/suite"
-	"testing"
+	"log"
+	"net/http"
+	"os"
 	"os/exec"
 	"strings"
-	"log"
-	"bytes"
-	"os"
+	"testing"
 	"time"
-	"net/http"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ConsulIp			string
-	ProxyHost			string
-	ProxyDockerHost 	string
+	ConsulIp            string
+	ProxyHost           string
+	ProxyDockerHost     string
 	ProxyDockerCertPath string
-	ServicePath			string
+	ServicePath         string
 }
 
 func (s *IntegrationTestSuite) SetupTest() {
@@ -67,16 +67,16 @@ func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
 		"--blue-green",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"books-ms-db", "Up" },
+		{"booksms_app-blue_1", "Up"},
+		{"books-ms-db", "Up"},
 	})
 
 	log.Println("Second deployment (green)")
 	os.Setenv("FLOW_CONSUL_ADDRESS", fmt.Sprintf("http://%s:8500", s.ConsulIp))
 	s.runCmdWithStdOut(true, "./docker-flow", "--flow", "deploy")
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-green_1", "Up" },
+		{"booksms_app-blue_1", "Up"},
+		{"booksms_app-green_1", "Up"},
 	})
 
 	log.Println("Third deployment (blue) with stop old release (green)")
@@ -85,8 +85,8 @@ func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
 		"./docker-flow",
 		"--flow", "deploy", "--flow", "stop-old")
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-green_1", "Exited" },
+		{"booksms_app-blue_1", "Up"},
+		{"booksms_app-green_1", "Exited"},
 	})
 }
 
@@ -102,9 +102,9 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "2",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-blue_2", "Up" },
-		{"books-ms-db", "Up" },
+		{"booksms_app-blue_1", "Up"},
+		{"booksms_app-blue_2", "Up"},
+		{"books-ms-db", "Up"},
 	})
 
 	log.Println("Second deployment (green, 4 (+2) instances)")
@@ -116,10 +116,10 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "+2",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-green_1", "Up" },
-		{"booksms_app-green_2", "Up" },
-		{"booksms_app-green_3", "Up" },
-		{"booksms_app-green_4", "Up" },
+		{"booksms_app-green_1", "Up"},
+		{"booksms_app-green_2", "Up"},
+		{"booksms_app-green_3", "Up"},
+		{"booksms_app-green_4", "Up"},
 	})
 
 	log.Println("Scaling (green, 3 (-1) instances)")
@@ -131,10 +131,10 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "\"-1\"",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-green_1", "Up" },
-		{"booksms_app-green_2", "Up" },
-		{"booksms_app-green_3", "Up" },
-		{"booksms_app-green_4", "N/A" },
+		{"booksms_app-green_1", "Up"},
+		{"booksms_app-green_2", "Up"},
+		{"booksms_app-green_3", "Up"},
+		{"booksms_app-green_4", "N/A"},
 	})
 }
 
@@ -161,7 +161,7 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--flow", "deploy", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Up" },
+		{"docker-flow-proxy", "Up"},
 	})
 	resp, err := http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
 	s.NoError(err)
@@ -170,7 +170,7 @@ func (s IntegrationTestSuite) Test_Proxy() {
 	log.Println("Runs proxy when stopped and reconfigures it when scale")
 	s.runCmdWithStdOut(false, "docker", "stop", "docker-flow-proxy")
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Exited" },
+		{"docker-flow-proxy", "Exited"},
 	})
 	s.runCmdWithStdOut(
 		true,
@@ -184,7 +184,7 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--flow", "scale", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Up" },
+		{"docker-flow-proxy", "Up"},
 	})
 	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
 	s.NoError(err)
@@ -218,9 +218,10 @@ func (s IntegrationTestSuite) Test_Proxy() {
 
 // Util
 type ContainerStatus struct {
-	Name	string
-	Status 	string
+	Name   string
+	Status string
 }
+
 func (s IntegrationTestSuite) verifyContainer(csList []ContainerStatus) {
 	s.runCmdWithStdOut(false, "docker", "ps", "-a")
 	for _, cs := range csList {

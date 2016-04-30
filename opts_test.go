@@ -1,32 +1,32 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/suite"
 	"fmt"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"os"
-	"strings"
-	"strconv"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
 )
 
 // Setup
 
 type OptsTestSuite struct {
 	suite.Suite
-	dir string
+	dir  string
 	opts Opts
 }
 
 func (s *OptsTestSuite) SetupTest() {
 	s.dir = "myProjectDir"
 	s.opts = Opts{
-		Project: "myProject",
-		Target: "myTarget",
+		Project:                 "myProject",
+		Target:                  "myTarget",
 		ServiceDiscoveryAddress: "http://1.2.3.4:1234",
-		ServiceName: "myFancyService",
-		CurrentColor: "orange",
+		ServiceName:             "myFancyService",
+		CurrentColor:            "orange",
 	}
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	path := fmt.Sprintf("/some/path/%s", s.dir)
@@ -221,25 +221,32 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 	s.Equal(expected, s.opts.Flow)
 }
 
+func (s OptsTestSuite) Test_ProcessOpts_SetsComposePathFromOld_WhenEmpty() {
+	expected := "path/to/compose/file"
+	s.opts.ComposePath = []string{}
+	s.opts.ComposePathOld = expected
+	ProcessOpts(&s.opts)
+	s.Equal([]string{expected}, s.opts.ComposePath)
+}
+
 // ParseEnvVars
 
 func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
-	data := []struct{
-		expected	string
-		key 		string
-		value		*string
+	data := []struct {
+		expected string
+		key      string
+		value    *string
 	}{
-		{"myHost", 				"FLOW_HOST", 					&s.opts.Host},
-		{"myCertPath", 			"FLOW_CERT_PATH", 				&s.opts.CertPath},
-		{"myComposePath", 		"FLOW_COMPOSE_PATH", 			&s.opts.ComposePath},
-		{"myTarget", 			"FLOW_TARGET", 					&s.opts.Target},
-		{"myProject", 			"FLOW_PROJECT", 				&s.opts.Project},
-		{"mySDAddress", 		"FLOW_CONSUL_ADDRESS", 			&s.opts.ServiceDiscoveryAddress},
-		{"myScale", 			"FLOW_SCALE", 					&s.opts.Scale},
-		{"myProxyHost", 		"FLOW_PROXY_HOST", 				&s.opts.ProxyHost},
-		{"myProxyDockerHost", 	"FLOW_PROXY_DOCKER_HOST", 		&s.opts.ProxyDockerHost},
-		{"myProxyCertPath", 	"FLOW_PROXY_DOCKER_CERT_PATH",	&s.opts.ProxyDockerCertPath},
-		{"4357",				"FLOW_PROXY_RECONF_PORT",		&s.opts.ProxyReconfPort},
+		{"myHost", "FLOW_HOST", &s.opts.Host},
+		{"myCertPath", "FLOW_CERT_PATH", &s.opts.CertPath},
+		{"myTarget", "FLOW_TARGET", &s.opts.Target},
+		{"myProject", "FLOW_PROJECT", &s.opts.Project},
+		{"mySDAddress", "FLOW_CONSUL_ADDRESS", &s.opts.ServiceDiscoveryAddress},
+		{"myScale", "FLOW_SCALE", &s.opts.Scale},
+		{"myProxyHost", "FLOW_PROXY_HOST", &s.opts.ProxyHost},
+		{"myProxyDockerHost", "FLOW_PROXY_DOCKER_HOST", &s.opts.ProxyDockerHost},
+		{"myProxyCertPath", "FLOW_PROXY_DOCKER_CERT_PATH", &s.opts.ProxyDockerCertPath},
+		{"4357", "FLOW_PROXY_RECONF_PORT", &s.opts.ProxyReconfPort},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -251,12 +258,12 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 }
 
 func (s OptsTestSuite) Test_ParseEnvVars_Bools() {
-	data := []struct{
-		key 		string
-		value		*bool
+	data := []struct {
+		key   string
+		value *bool
 	}{
-		{"FLOW_BLUE_GREEN", 		&s.opts.BlueGreen},
-		{"FLOW_PULL_SIDE_TARGETS", 	&s.opts.PullSideTargets},
+		{"FLOW_BLUE_GREEN", &s.opts.BlueGreen},
+		{"FLOW_PULL_SIDE_TARGETS", &s.opts.PullSideTargets},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, "true")
@@ -268,14 +275,15 @@ func (s OptsTestSuite) Test_ParseEnvVars_Bools() {
 }
 
 func (s OptsTestSuite) Test_ParseEnvVars_Slices() {
-	data := []struct{
-		expected	string
-		key 		string
-		value		*[]string
+	data := []struct {
+		expected string
+		key      string
+		value    *[]string
 	}{
 		{"myTarget1,myTarget2", "FLOW_SIDE_TARGETS", &s.opts.SideTargets},
 		{"deploy,stop-old", "FLOW", &s.opts.Flow},
 		{"path1,path2", "FLOW_SERVICE_PATH", &s.opts.ServicePath},
+		{"cpath1,cpath2", "FLOW_COMPOSE_PATH", &s.opts.ComposePath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -287,9 +295,9 @@ func (s OptsTestSuite) Test_ParseEnvVars_Slices() {
 }
 
 func (s OptsTestSuite) Test_ParseEnvVars_DoesNotParseSlices_WhenEmpty() {
-	data := []struct{
-		key 		string
-		value		*[]string
+	data := []struct {
+		key   string
+		value *[]string
 	}{
 		{"FLOW_SIDE_TARGETS", &s.opts.SideTargets},
 	}
@@ -315,22 +323,21 @@ func (s OptsTestSuite) Test_ParseEnvVars_ReturnsError_WhenFailure() {
 // ParseArgs
 
 func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
-	data := []struct{
-		expected	string
-		key 		string
-		value		*string
+	data := []struct {
+		expected string
+		key      string
+		value    *string
 	}{
-		{"hostFromArgs", 			"host", 					&s.opts.Host},
-		{"certPathFromArgs", 		"cert-path", 				&s.opts.CertPath},
-		{"composePathFromArgs",		"compose-path", 			&s.opts.ComposePath},
-		{"targetFromArgs", 			"target", 					&s.opts.Target},
-		{"projectFromArgs", 		"project", 					&s.opts.Project},
-		{"addressFromArgs", 		"consul-address", 			&s.opts.ServiceDiscoveryAddress},
-		{"scaleFromArgs", 			"scale", 					&s.opts.Scale},
-		{"proxyDomainFromArgs",		"proxy-host", 				&s.opts.ProxyHost},
-		{"proxyHostFromArgs", 		"proxy-docker-host", 		&s.opts.ProxyDockerHost},
-		{"proxyCertPathFromArgs", 	"proxy-docker-cert-path", 	&s.opts.ProxyDockerCertPath},
-		{"1234", 					"proxy-reconf-port", 		&s.opts.ProxyReconfPort},
+		{"hostFromArgs", "host", &s.opts.Host},
+		{"certPathFromArgs", "cert-path", &s.opts.CertPath},
+		{"targetFromArgs", "target", &s.opts.Target},
+		{"projectFromArgs", "project", &s.opts.Project},
+		{"addressFromArgs", "consul-address", &s.opts.ServiceDiscoveryAddress},
+		{"scaleFromArgs", "scale", &s.opts.Scale},
+		{"proxyDomainFromArgs", "proxy-host", &s.opts.ProxyHost},
+		{"proxyHostFromArgs", "proxy-docker-host", &s.opts.ProxyDockerHost},
+		{"proxyCertPathFromArgs", "proxy-docker-cert-path", &s.opts.ProxyDockerCertPath},
+		{"1234", "proxy-reconf-port", &s.opts.ProxyReconfPort},
 	}
 
 	for _, d := range data {
@@ -342,12 +349,13 @@ func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
 
 func (s OptsTestSuite) Test_ParseArgs_ParsesLongSlices() {
 	os.Args = []string{"myProgram"}
-	data := []struct{
-		expected	[]string
-		key 		string
-		value		*[]string
+	data := []struct {
+		expected []string
+		key      string
+		value    *[]string
 	}{
 		{[]string{"path1", "path2"}, "service-path", &s.opts.ServicePath},
+		{[]string{"cpath1", "cpath2"}, "compose-path", &s.opts.ComposePath},
 	}
 
 	for _, d := range data {
@@ -365,13 +373,12 @@ func (s OptsTestSuite) Test_ParseArgs_ParsesLongSlices() {
 }
 
 func (s OptsTestSuite) TestParseArgs_ShortStrings() {
-	data := []struct{
-		expected	string
-		key 		string
-		value		*string
+	data := []struct {
+		expected string
+		key      string
+		value    *string
 	}{
 		{"hostFromArgs", "H", &s.opts.Host},
-		{"composePathFromArgs", "f", &s.opts.ComposePath},
 		{"targetFromArgs", "t", &s.opts.Target},
 		{"projectFromArgs", "p", &s.opts.Project},
 		{"addressFromArgs", "c", &s.opts.ServiceDiscoveryAddress},
@@ -386,9 +393,9 @@ func (s OptsTestSuite) TestParseArgs_ShortStrings() {
 }
 
 func (s OptsTestSuite) TestParseArgs_LongBools() {
-	data := []struct{
-		key 		string
-		value		*bool
+	data := []struct {
+		key   string
+		value *bool
 	}{
 		{"blue-green", &s.opts.BlueGreen},
 		{"pull-side-targets", &s.opts.PullSideTargets},
@@ -402,9 +409,9 @@ func (s OptsTestSuite) TestParseArgs_LongBools() {
 }
 
 func (s OptsTestSuite) TestParseArgs_ShortBools() {
-	data := []struct{
-		key 		string
-		value		*bool
+	data := []struct {
+		key   string
+		value *bool
 	}{
 		{"b", &s.opts.BlueGreen},
 		{"S", &s.opts.PullSideTargets},
@@ -418,10 +425,10 @@ func (s OptsTestSuite) TestParseArgs_ShortBools() {
 }
 
 func (s OptsTestSuite) TestParseArgs_LongSlices() {
-	data := []struct{
-		expected	[]string
-		key 		string
-		value		*[]string
+	data := []struct {
+		expected []string
+		key      string
+		value    *[]string
 	}{
 		{[]string{"target1", "target2"}, "side-target", &s.opts.SideTargets},
 		{[]string{"deploy", "stop-old"}, "flow", &s.opts.Flow},
@@ -438,13 +445,14 @@ func (s OptsTestSuite) TestParseArgs_LongSlices() {
 }
 
 func (s OptsTestSuite) TestParseArgs_ShortSlices() {
-	data := []struct{
-		expected	[]string
-		key 		string
-		value		*[]string
+	data := []struct {
+		expected []string
+		key      string
+		value    *[]string
 	}{
 		{[]string{"target1", "target2"}, "T", &s.opts.SideTargets},
 		{[]string{"flow", "stop-old"}, "F", &s.opts.Flow},
+		{[]string{"cpath1", "cpath2"}, "f", &s.opts.ComposePath},
 	}
 
 	for _, d := range data {
@@ -496,7 +504,8 @@ func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenUnmarshalFails() {
 func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	host := "hostFromYml"
 	certPath := "certPathFromYml"
-	composePath := "composePathFromYml"
+	composePath1 := "cpath1"
+	composePath2 := "cpath2"
 	target := "targetFromYml"
 	sideTarget1 := "sideTarget1FromYml"
 	sideTarget2 := "sideTarget2FromYml"
@@ -515,6 +524,9 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 host: %s
 cert_path: %s
 compose_path: %s
+compose_paths:
+  - %s
+  - %s
 blue_green: true
 target: %s
 side_targets:
@@ -536,7 +548,7 @@ service_path:
   - %s
   - %s
 `,
-		host, certPath, composePath, target, sideTarget1, sideTarget2,
+		host, certPath, composePath1, composePath1, composePath2, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
 		proxyDockerCertPath, proxyReconfPort, flow1, flow2, path1,
 		path2,
@@ -548,7 +560,8 @@ service_path:
 	ParseYml(&s.opts)
 
 	s.Equal(host, s.opts.Host)
-	s.Equal(composePath, s.opts.ComposePath)
+	s.Equal(composePath1, s.opts.ComposePathOld)
+	s.Equal([]string{composePath1, composePath2}, s.opts.ComposePath)
 	s.True(s.opts.BlueGreen)
 	s.Equal(target, s.opts.Target)
 	s.Equal([]string{sideTarget1, sideTarget2}, s.opts.SideTargets)
@@ -569,15 +582,15 @@ service_path:
 func (s OptsTestSuite) TestGetOpts_SetsComposePath() {
 	opts, _ := GetOpts()
 
-	s.Equal(dockerComposePath, opts.ComposePath)
+	s.Equal([]string{dockerComposePath}, opts.ComposePath)
 }
 
 func (s OptsTestSuite) TestGetOpts_InvokesParseYml() {
 	called := false
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseYml = func (*Opts) error {
+	parseYml = func(*Opts) error {
 		called = true
 		return nil
 	}
@@ -590,10 +603,10 @@ func (s OptsTestSuite) TestGetOpts_InvokesParseYml() {
 
 func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseYmlFails() {
 	restore := parseYml
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseYml = func (*Opts) error {
+	parseYml = func(*Opts) error {
 		return fmt.Errorf("This is an error from ParseYml")
 	}
 
@@ -605,10 +618,10 @@ func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseYmlFails() {
 
 func (s OptsTestSuite) Test_GetOpts_InvokesParseEnvVars() {
 	called := false
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseEnvVars = func (*Opts) error {
+	parseEnvVars = func(*Opts) error {
 		called = true
 		return nil
 	}
@@ -621,10 +634,10 @@ func (s OptsTestSuite) Test_GetOpts_InvokesParseEnvVars() {
 
 func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseEnvVarsFails() {
 	restore := parseEnvVars
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseEnvVars = func (*Opts) error {
+	parseEnvVars = func(*Opts) error {
 		return fmt.Errorf("This is an error from ParseEnvVars")
 	}
 
@@ -636,10 +649,10 @@ func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseEnvVarsFails() {
 
 func (s OptsTestSuite) Test_GetOpts_InvokesParseArgs() {
 	called := false
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseArgs = func (*Opts) error {
+	parseArgs = func(*Opts) error {
 		called = true
 		return nil
 	}
@@ -652,10 +665,10 @@ func (s OptsTestSuite) Test_GetOpts_InvokesParseArgs() {
 
 func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseArgsFails() {
 	restore := parseArgs
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return nil
 	}
-	parseArgs = func (*Opts) error {
+	parseArgs = func(*Opts) error {
 		return fmt.Errorf("This is an error from ParseArgs")
 	}
 
@@ -667,7 +680,7 @@ func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenParseArgsFails() {
 
 func (s OptsTestSuite) Test_GetOpts_InvokesProcessOpts() {
 	called := false
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		called = true
 		return nil
 	}
@@ -680,7 +693,7 @@ func (s OptsTestSuite) Test_GetOpts_InvokesProcessOpts() {
 
 func (s OptsTestSuite) Test_GetOpts_ReturnsError_WhenProcessOptsFails() {
 	restore := processOpts
-	processOpts = func (*Opts) error {
+	processOpts = func(*Opts) error {
 		return fmt.Errorf("This is an error from ProcessOpts")
 	}
 
@@ -701,4 +714,3 @@ func TestOptsTestSuite(t *testing.T) {
 	}()
 	suite.Run(t, new(OptsTestSuite))
 }
-

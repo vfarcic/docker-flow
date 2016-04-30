@@ -1,29 +1,29 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/suite"
-	"github.com/stretchr/testify/mock"
-	"os"
 	"fmt"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+	"os"
 	"os/exec"
+	"testing"
 )
 
 type DockerComposeTestSuite struct {
 	suite.Suite
-	dockerComposePath	string
-	serviceName 		string
-	target            	string
-	sideTargets			[]string
-	color             	string
-	blueGreen         	bool
-	host 			  	string
-	certPath		  	string
-	project 		  	string
+	dockerComposePath []string
+	serviceName       string
+	target            string
+	sideTargets       []string
+	color             string
+	blueGreen         bool
+	host              string
+	certPath          string
+	project           string
 }
 
 func (s *DockerComposeTestSuite) SetupTest() {
-	s.dockerComposePath = "test-docker-compose.yml"
+	s.dockerComposePath = []string{"test-docker-compose.yml"}
 	s.serviceName = "myService"
 	s.target = "my-target"
 	s.sideTargets = []string{"my-side-target-1", "my-side-target-2"}
@@ -46,7 +46,7 @@ func (s *DockerComposeTestSuite) SetupTest() {
 	}
 }
 
-// CreateFlow
+// CreateFlowFile
 
 func (s DockerComposeTestSuite) Test_CreateFlowFile_ReturnsNil() {
 	actual := DockerCompose{}.CreateFlowFile(s.dockerComposePath, s.serviceName, s.target, s.sideTargets, s.color, s.blueGreen)
@@ -77,9 +77,9 @@ func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesTheFile() {
 }
 
 func (s DockerComposeTestSuite) Test_CreateFlowFile_CreatesDockerComposeReplica() {
-	var actual string
+	actual := []string{}
 	readFile = func(filename string) ([]byte, error) {
-		actual = filename
+		actual = append(actual, filename)
 		return []byte(""), nil
 	}
 
@@ -175,7 +175,6 @@ services:
 		s.sideTargets[1],
 		s.dockerComposePath,
 		s.sideTargets[1],
-
 	)
 	readFile = func(filename string) ([]byte, error) {
 		return []byte(dcContent), nil
@@ -332,21 +331,19 @@ func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
 
 }
 
-
 // Mock
 
-type DockerComposeMock struct{
+type DockerComposeMock struct {
 	mock.Mock
 }
 
 func (m *DockerComposeMock) CreateFlowFile(
-		dcPath,
-		serviceName,
-		target string,
-		sideTargets []string,
-		color string,
-		blueGreen bool,
-	) error {
+	dcPath []string,
+	serviceName, target string,
+	sideTargets []string,
+	color string,
+	blueGreen bool,
+) error {
 	args := m.Called(dcPath, serviceName, target, sideTargets, color, blueGreen)
 	return args.Error(0)
 }

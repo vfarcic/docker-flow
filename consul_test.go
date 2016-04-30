@@ -1,13 +1,13 @@
 package main
 
 import (
-	"testing"
 	"fmt"
+	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
-	"github.com/stretchr/testify/suite"
-	"strconv"
 	"os"
+	"strconv"
+	"testing"
 )
 
 type ConsulTestSuite struct {
@@ -32,19 +32,19 @@ func (suite *ConsulTestSuite) SetupTest() {
 		scalePutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/scale?", suite.ServiceName)
 		colorPutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/color?", suite.ServiceName)
 		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
-		if (r.Method == "GET") {
-			if (actualUrl == scaleGetUrl) {
+		if r.Method == "GET" {
+			if actualUrl == scaleGetUrl {
 				fmt.Fprint(w, suite.ConsulScale)
-			} else if (actualUrl == colorGetUrl) {
+			} else if actualUrl == colorGetUrl {
 				fmt.Fprint(w, suite.ServiceColor)
 			} else {
 				fmt.Fprint(w, "")
 			}
-		} else if (r.Method == "PUT") {
-			if (actualUrl == scalePutUrl) {
+		} else if r.Method == "PUT" {
+			if actualUrl == scalePutUrl {
 				fmt.Fprint(w, suite.PutScaleResponse)
 			}
-			if (actualUrl == colorPutUrl) {
+			if actualUrl == colorPutUrl {
 				fmt.Fprint(w, suite.PutColorResponse)
 			}
 		}
@@ -80,13 +80,13 @@ func (suite ConsulTestSuite) Test_GetScaleCalc_ReturnScaleFuncArg() {
 func (suite ConsulTestSuite) Test_GetScaleCalc_IncrementsScale() {
 	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, "+2")
 
-	suite.Equal(suite.ConsulScale + 2, actual)
+	suite.Equal(suite.ConsulScale+2, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_DecrementsScale() {
 	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, "-2")
 
-	suite.Equal(suite.ConsulScale - 2, actual)
+	suite.Equal(suite.ConsulScale-2, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_Returns1_WhenScaleIsNegativeOrZero() {

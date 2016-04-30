@@ -1,34 +1,34 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/mock"
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"os"
+	"testing"
 )
 
 type FlowTestSuite struct {
 	suite.Suite
-	opts		Opts
-	dc			DockerComposable
+	opts Opts
+	dc   DockerComposable
 }
 
 func (s *FlowTestSuite) SetupTest() {
 	s.opts = Opts{
-		ComposePath: "myComposePath",
-		Target: "myTarget",
-		NextColor: "orange",
-		CurrentColor: "pink",
-		NextTarget: "myNextTarget",
+		ComposePath:   []string{"myComposePath"},
+		Target:        "myTarget",
+		NextColor:     "orange",
+		CurrentColor:  "pink",
+		NextTarget:    "myNextTarget",
 		CurrentTarget: "myCurrentTarget",
-		BlueGreen: true,
-		Flow: []string{"deploy", "scale"},
+		BlueGreen:     true,
+		Flow:          []string{"deploy", "scale"},
 		ServiceDiscoveryAddress: "myServiceDiscoveryAddress",
-		ServiceName: "myServiceName",
-		ProxyHost: "myProxyHost",
-		ProxyDockerHost: "myProxyDockerHost",
-		ProxyDockerCertPath: "myProxyCertPath",
+		ServiceName:             "myServiceName",
+		ProxyHost:               "myProxyHost",
+		ProxyDockerHost:         "myProxyDockerHost",
+		ProxyDockerCertPath:     "myProxyCertPath",
 	}
 	GetOptsOrig := GetOpts
 	defer func() {
@@ -41,8 +41,8 @@ func (s *FlowTestSuite) SetupTest() {
 	dockerCompose = s.dc
 	flow = getFlowMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
-	logFatal = func(v ...interface{}) { }
-	logPrintln = func(v ...interface{}) { }
+	logFatal = func(v ...interface{}) {}
+	logPrintln = func(v ...interface{}) {}
 }
 
 // Deploy
@@ -99,9 +99,9 @@ func (s MainTestSuite) Test_Deploy_ReturnsError_WhenDeployAndDockerComposeCreate
 
 func (s FlowTestSuite) Test_DeployInvokesPullTargets() {
 	opts := Opts{
-		Host: "myHost",
-		Project: "myProject",
-		NextTarget: "myNextTarget",
+		Host:        "myHost",
+		Project:     "myProject",
+		NextTarget:  "myNextTarget",
 		SideTargets: []string{"target1", "target2"},
 	}
 	mockObj := getDockerComposeMock(opts, "")
@@ -128,8 +128,8 @@ func (s FlowTestSuite) Test_DeployReturnsError_WhenPullTargetsFails() {
 
 func (s FlowTestSuite) Test_DeployInvokesUpTargets() {
 	opts := Opts{
-		Host: "myHost",
-		Project: "myProject",
+		Host:        "myHost",
+		Project:     "myProject",
 		SideTargets: []string{"target1", "target2"},
 	}
 	mockObj := getDockerComposeMock(opts, "")
@@ -161,9 +161,9 @@ func (s FlowTestSuite) Test_DeployReturnsError_WhenUpTargetsFails() {
 
 func (s FlowTestSuite) Test_DeployInvokesRmTargets() {
 	opts := Opts{
-		BlueGreen: true,
-		Host: "myHost",
-		Project: "myProject",
+		BlueGreen:  true,
+		Host:       "myHost",
+		Project:    "myProject",
 		NextTarget: "myNextTarget",
 	}
 	mockObj := getDockerComposeMock(opts, "")
@@ -215,12 +215,12 @@ func (s FlowTestSuite) Test_DeployReturnsError_WhenGetScaleCalcFails() {
 
 func (s FlowTestSuite) Test_DeployDoesNotInvokeScaleTargets() {
 	opts := Opts{
-		Host: "myHost",
-		Project: "myProject",
-		NextTarget: "myNextTarget",
+		Host:                    "myHost",
+		Project:                 "myProject",
+		NextTarget:              "myNextTarget",
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
-		ServiceName: "myService",
-		Scale: "34",
+		ServiceName:             "myService",
+		Scale:                   "34",
 	}
 	mockObj := getDockerComposeMock(opts, "")
 	flow := Flow{}
@@ -275,8 +275,8 @@ func (s FlowTestSuite) Test_DeployInvokesRemoveFlowFileOnlyOnce() {
 func (s FlowTestSuite) Test_DeployInvokesPutScale() {
 	opts := Opts{
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
-		ServiceName: "myService",
-		Scale: "34",
+		ServiceName:             "myService",
+		Scale:                   "34",
 	}
 	mockObj := getDockerComposeMock(opts, "")
 	scMockObj := getServiceDiscoveryMock(opts, "")
@@ -301,7 +301,7 @@ func (s FlowTestSuite) Test_Deploy_InvokesDockerComposeRemoveFlow() {
 
 func (s FlowTestSuite) Test_Deploy_ReturnsError_WhenDockerComposeRemoveFlowFails() {
 	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
-	mockObj.On("RemoveFlow",).Return(fmt.Errorf("This is an error"))
+	mockObj.On("RemoveFlow").Return(fmt.Errorf("This is an error"))
 	s.dc = mockObj
 
 	err := Flow{}.Deploy(s.opts, s.dc)
@@ -347,7 +347,6 @@ func (s MainTestSuite) Test_Scale_ReturnsError_WhenDeployAndDockerComposeCreateF
 	s.Error(err)
 }
 
-
 // Scale > GetScaleCalc
 
 func (s FlowTestSuite) Test_ScaleReturnsError_WhenGetScaleCalcFails() {
@@ -366,11 +365,11 @@ func (s FlowTestSuite) Test_ScaleReturnsError_WhenGetScaleCalcFails() {
 
 func (s FlowTestSuite) Test_ScaleInvokesScaleTargets() {
 	opts := Opts{
-		Host: "myHost",
-		Project: "myProject",
+		Host:                    "myHost",
+		Project:                 "myProject",
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
-		ServiceName: "myService",
-		Scale: "34",
+		ServiceName:             "myService",
+		Scale:                   "34",
 	}
 	mockObj := getDockerComposeMock(opts, "")
 	flow := Flow{}
@@ -406,8 +405,8 @@ func (s FlowTestSuite) Test_ScaleReturnsError_WhenScaleTargetsFails() {
 func (s FlowTestSuite) Test_ScaleInvokesPutScale() {
 	opts := Opts{
 		ServiceDiscoveryAddress: "mySeviceDiscoveryAddress",
-		ServiceName: "myService",
-		Scale: "34",
+		ServiceName:             "myService",
+		Scale:                   "34",
 	}
 	mockObj := getDockerComposeMock(opts, "")
 	scMockObj := getServiceDiscoveryMock(opts, "")
@@ -432,7 +431,7 @@ func (s FlowTestSuite) Test_Scale_InvokesDockerComposeRemoveFlow() {
 
 func (s FlowTestSuite) Test_Scale_ReturnsError_WhenDockerComposeRemoveFlowFails() {
 	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
-	mockObj.On("RemoveFlow",).Return(fmt.Errorf("This is an error"))
+	mockObj.On("RemoveFlow").Return(fmt.Errorf("This is an error"))
 	s.dc = mockObj
 
 	err := Flow{}.Scale(s.opts, s.dc, s.opts.CurrentTarget, true)
@@ -444,8 +443,8 @@ func (s FlowTestSuite) Test_Scale_ReturnsError_WhenDockerComposeRemoveFlowFails(
 
 func (s FlowTestSuite) Test_GetTargetsReturnsAllTargets() {
 	opts := Opts{
-		NextTarget: "myNextTarget",
-		SideTargets: []string{"sideTarget1", "sideTarget2"},
+		NextTarget:      "myNextTarget",
+		SideTargets:     []string{"sideTarget1", "sideTarget2"},
 		PullSideTargets: true,
 	}
 	expected := append([]string{opts.NextTarget}, opts.SideTargets...)
@@ -457,8 +456,8 @@ func (s FlowTestSuite) Test_GetTargetsReturnsAllTargets() {
 
 func (s FlowTestSuite) Test_GetTargetsExcludesSideTargets_WhenNotPullSideTargets() {
 	opts := Opts{
-		NextTarget: "myNextTarget",
-		SideTargets: []string{"sideTarget1", "sideTarget2"},
+		NextTarget:      "myNextTarget",
+		SideTargets:     []string{"sideTarget1", "sideTarget2"},
 		PullSideTargets: false,
 	}
 	expected := []string{opts.NextTarget}
@@ -559,7 +558,7 @@ func TestFlowTestSuite(t *testing.T) {
 
 // Mock
 
-type FlowMock struct{
+type FlowMock struct {
 	mock.Mock
 }
 
@@ -569,7 +568,7 @@ func (m *FlowMock) Deploy(opts Opts, dc DockerComposable) error {
 }
 
 func (m *FlowMock) GetPullTargets(opts Opts) []string {
-//	args := m.Called(opts)
+	//	args := m.Called(opts)
 	return []string{}
 }
 

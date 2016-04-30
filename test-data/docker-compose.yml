@@ -1,0 +1,7 @@
+version: '2'
+
+services:
+  test-consul:
+    container_name: test-consul
+    image: progrium/consul
+    command: -server -bootstrap
