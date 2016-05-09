@@ -1,29 +1,29 @@
 package main
 
 import (
-	"github.com/stretchr/testify/suite"
-	"testing"
-	"os/exec"
 	"fmt"
-	"net/http/httptest"
+	"github.com/stretchr/testify/suite"
 	"net/http"
-	"strings"
+	"net/http/httptest"
 	"os"
+	"os/exec"
+	"strings"
+	"testing"
 	"time"
 )
 
 type HaProxyTestSuite struct {
 	suite.Suite
-	ScAddress 		string
-	Host      		string
-	CertPath  		string
-	ExitedMessage 	string
-	ProxyHost		string
-	Project		 	string
-	Color			string
-	ServicePath		[]string
-	ReconfPort		string
-	Server          *httptest.Server
+	ScAddress     string
+	Host          string
+	CertPath      string
+	ExitedMessage string
+	ProxyHost     string
+	Project       string
+	Color         string
+	ServicePath   []string
+	ReconfPort    string
+	Server        *httptest.Server
 }
 
 func (s *HaProxyTestSuite) SetupTest() {
@@ -42,8 +42,8 @@ func (s *HaProxyTestSuite) SetupTest() {
 			strings.Join(s.ServicePath, ","),
 		)
 		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
-		if (r.Method == "GET") {
-			if (actualUrl == reconfigureUrl) {
+		if r.Method == "GET" {
+			if actualUrl == reconfigureUrl {
 				w.WriteHeader(http.StatusOK)
 			}
 		}
@@ -57,8 +57,8 @@ func (s *HaProxyTestSuite) SetupTest() {
 	runHaProxyStartCmd = func(cmd *exec.Cmd) error {
 		return nil
 	}
-	logPrintln = func(v ...interface{}) { }
-	sleep = func(d time.Duration) { }
+	logPrintln = func(v ...interface{}) {}
+	sleep = func(d time.Duration) {}
 }
 
 // Provision
@@ -191,7 +191,7 @@ func (s HaProxyTestSuite) Test_Provision_StartsAndDoesNotRun_WhenProxyIsExited()
 
 func (s HaProxyTestSuite) Test_Provision_StartsDockerFlowProxyContainer_WhenProxyIsExited() {
 	var actual []string
-	expected := []string{ "docker", "start", "docker-flow-proxy" }
+	expected := []string{"docker", "start", "docker-flow-proxy"}
 	runHaProxyPsCmd = func(cmd *exec.Cmd) error {
 		cmd.Stdout.Write([]byte(s.ExitedMessage))
 		return nil

@@ -1,25 +1,25 @@
 package main
 
 import (
-	"testing"
-	"github.com/stretchr/testify/suite"
-	"github.com/stretchr/testify/mock"
-	"os"
 	"fmt"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+	"os"
 	"os/exec"
+	"testing"
 )
 
 type DockerComposeTestSuite struct {
 	suite.Suite
-	dockerComposePath	string
-	serviceName 		string
-	target            	string
-	sideTargets			[]string
-	color             	string
-	blueGreen         	bool
-	host 			  	string
-	certPath		  	string
-	project 		  	string
+	dockerComposePath string
+	serviceName       string
+	target            string
+	sideTargets       []string
+	color             string
+	blueGreen         bool
+	host              string
+	certPath          string
+	project           string
 }
 
 func (s *DockerComposeTestSuite) SetupTest() {
@@ -175,7 +175,6 @@ services:
 		s.sideTargets[1],
 		s.dockerComposePath,
 		s.sideTargets[1],
-
 	)
 	readFile = func(filename string) ([]byte, error) {
 		return []byte(dcContent), nil
@@ -332,21 +331,20 @@ func (s DockerComposeTestSuite) testCmd(f testCmdType, args ...string) {
 
 }
 
-
 // Mock
 
-type DockerComposeMock struct{
+type DockerComposeMock struct {
 	mock.Mock
 }
 
 func (m *DockerComposeMock) CreateFlowFile(
-		dcPath,
-		serviceName,
-		target string,
-		sideTargets []string,
-		color string,
-		blueGreen bool,
-	) error {
+	dcPath,
+	serviceName,
+	target string,
+	sideTargets []string,
+	color string,
+	blueGreen bool,
+) error {
 	args := m.Called(dcPath, serviceName, target, sideTargets, color, blueGreen)
 	return args.Error(0)
 }

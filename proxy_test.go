@@ -6,7 +6,7 @@ import (
 
 // Mock
 
-type ProxyMock struct{
+type ProxyMock struct {
 	mock.Mock
 }
 
@@ -19,7 +19,6 @@ func (m *ProxyMock) Reconfigure(host, reconfPort, serviceName, serviceColor stri
 	args := m.Called(host, reconfPort, serviceName, serviceColor, servicePath)
 	return args.Error(0)
 }
-
 
 func getProxyMock(skipMethod string) *ProxyMock {
 	mockObj := new(ProxyMock)

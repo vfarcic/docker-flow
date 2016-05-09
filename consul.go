@@ -1,10 +1,10 @@
 package main
 
 import (
-	"strconv"
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -75,7 +75,7 @@ func (c Consul) putValue(address, serviceName, key, value string) (string, error
 	request, _ := http.NewRequest("PUT", url, strings.NewReader(value))
 	resp, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("Could not store scale information in Consul\n%v", err)
+		return "", fmt.Errorf("Could not store store information in Consul\n%v", err)
 	}
 	defer resp.Body.Close()
 	data, _ := ioutil.ReadAll(resp.Body)

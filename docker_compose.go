@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const dockerComposeFlowPath  = "docker-compose-flow.yml.tmp"
+const dockerComposeFlowPath = "docker-compose-flow.yml.tmp"
 
 var dockerCompose DockerComposable = DockerCompose{}
 var getDockerCompose = func() DockerComposable {
@@ -143,7 +143,7 @@ func (dc DockerCompose) StopTargets(host, certPath, project string, targets []st
 func (dc DockerCompose) getArgs(host, certPath, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
 	SetDockerHost(host, certPath)
-	if (len(project) > 0) {
+	if len(project) > 0 {
 		args = append(args, "-p", project)
 	}
 	return args
@@ -155,7 +155,7 @@ func (dc DockerCompose) runCmd(host, certPath, project string, args []string) er
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Docker Compose command %v\n%v", cmd, err)
+		return fmt.Errorf("Docker Compose command: docker-compose %s\n%s", strings.Join(cmd.Args, ","), err.Error())
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ const BlueColor = "blue"
 const GreenColor = "green"
 
 var serviceDiscovery ServiceDiscovery = Consul{}
+
 func getServiceDiscovery() ServiceDiscovery {
 	return serviceDiscovery
 }

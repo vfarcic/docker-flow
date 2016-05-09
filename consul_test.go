@@ -1,13 +1,13 @@
 package main
 
 import (
-	"testing"
 	"fmt"
+	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
-	"github.com/stretchr/testify/suite"
-	"strconv"
 	"os"
+	"strconv"
+	"testing"
 )
 
 type ConsulTestSuite struct {
@@ -20,32 +20,32 @@ type ConsulTestSuite struct {
 	PutColorResponse string
 }
 
-func (suite *ConsulTestSuite) SetupTest() {
-	suite.ConsulScale = 4
-	suite.ServiceName = "myService"
-	suite.ServiceColor = BlueColor
-	suite.PutScaleResponse = "PUT_SCALE"
-	suite.PutColorResponse = "PUT_COLOR"
-	suite.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		scaleGetUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/scale?raw", suite.ServiceName)
-		colorGetUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/color?raw", suite.ServiceName)
-		scalePutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/scale?", suite.ServiceName)
-		colorPutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/color?", suite.ServiceName)
+func (s *ConsulTestSuite) SetupTest() {
+	s.ConsulScale = 4
+	s.ServiceName = "myService"
+	s.ServiceColor = BlueColor
+	s.PutScaleResponse = "PUT_SCALE"
+	s.PutColorResponse = "PUT_COLOR"
+	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		scaleGetUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/scale?raw", s.ServiceName)
+		colorGetUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/color?raw", s.ServiceName)
+		scalePutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/scale?", s.ServiceName)
+		colorPutUrl := fmt.Sprintf("/v1/kv/docker-flow/%s/color?", s.ServiceName)
 		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
-		if (r.Method == "GET") {
-			if (actualUrl == scaleGetUrl) {
-				fmt.Fprint(w, suite.ConsulScale)
-			} else if (actualUrl == colorGetUrl) {
-				fmt.Fprint(w, suite.ServiceColor)
+		if r.Method == "GET" {
+			if actualUrl == scaleGetUrl {
+				fmt.Fprint(w, s.ConsulScale)
+			} else if actualUrl == colorGetUrl {
+				fmt.Fprint(w, s.ServiceColor)
 			} else {
 				fmt.Fprint(w, "")
 			}
-		} else if (r.Method == "PUT") {
-			if (actualUrl == scalePutUrl) {
-				fmt.Fprint(w, suite.PutScaleResponse)
+		} else if r.Method == "PUT" {
+			if actualUrl == scalePutUrl {
+				fmt.Fprint(w, s.PutScaleResponse)
 			}
-			if (actualUrl == colorPutUrl) {
-				fmt.Fprint(w, suite.PutColorResponse)
+			if actualUrl == colorPutUrl {
+				fmt.Fprint(w, s.PutColorResponse)
 			}
 		}
 	}))
@@ -63,30 +63,30 @@ func (s ConsulTestSuite) Test_GetScaleCalc_ReturnsNumberFromConsul() {
 	s.Equal(s.ConsulScale, actual)
 }
 
-func (suite ConsulTestSuite) Test_GetScaleCalc_ReturnsErrorFromHttpGet() {
-	_, err := Consul{}.GetScaleCalc("WRONG_URL", suite.ServiceName, "")
+func (s ConsulTestSuite) Test_GetScaleCalc_ReturnsErrorFromHttpGet() {
+	_, err := Consul{}.GetScaleCalc("WRONG_URL", s.ServiceName, "")
 
-	suite.Error(err)
+	s.Error(err)
 }
 
-func (suite ConsulTestSuite) Test_GetScaleCalc_ReturnScaleFuncArg() {
+func (s ConsulTestSuite) Test_GetScaleCalc_ReturnScaleFuncArg() {
 	expected := 7
 
-	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, strconv.Itoa(expected))
+	actual, _ := Consul{}.GetScaleCalc(s.Server.URL, s.ServiceName, strconv.Itoa(expected))
 
-	suite.Equal(expected, actual)
+	s.Equal(expected, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_IncrementsScale() {
 	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, "+2")
 
-	suite.Equal(suite.ConsulScale + 2, actual)
+	suite.Equal(suite.ConsulScale+2, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_DecrementsScale() {
 	actual, _ := Consul{}.GetScaleCalc(suite.Server.URL, suite.ServiceName, "-2")
 
-	suite.Equal(suite.ConsulScale - 2, actual)
+	suite.Equal(suite.ConsulScale-2, actual)
 }
 
 func (suite ConsulTestSuite) Test_GetScaleCalc_Returns1_WhenScaleIsNegativeOrZero() {

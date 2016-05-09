@@ -2,11 +2,15 @@
 
 package main
 
-// To run locally on OS X
-// $ docker-machine create -d virtualbox testing
-// $ eval "$(docker-machine env testing)"
+// Without Docker Machine
+// $ export HOST_IP=<HOST_IP>
 // $ go build && go test --cover --tags integration
-// $ docker-machine rm -f testing
+
+// With Docker Machine
+// $ docker-machine create -d virtualbox docker-flow-test
+// $ eval "$(docker-machine env docker-flow-test)"
+// $ go build && go test --cover --tags integration
+// $ docker-machine rm -f docker-flow-test
 // TODO: Change books-ms for a "lighter" service
 
 import (
@@ -279,8 +283,11 @@ func (s IntegrationTestSuite) runCmdWithStdOut(failOnError bool, command string,
 
 func TestIntegrationTestSuite(t *testing.T) {
 	s := new(IntegrationTestSuite)
-	_, msg := s.runCmdWithoutStdOut(true, "docker-machine", "ip", "testing")
-	ip := strings.Trim(msg, "\n")
+	ip := os.Getenv("HOST_IP")
+	if len(ip) == 0 {
+		_, msg := s.runCmdWithoutStdOut(true, "docker-machine", "ip", "docker-flow-test")
+		ip = strings.Trim(msg, "\n")
+	}
 	s.ConsulIp = ip
 	s.ProxyHost = ip
 	s.ProxyDockerHost = os.Getenv("DOCKER_HOST")
