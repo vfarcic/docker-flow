@@ -74,13 +74,15 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 	if len(serviceColor) > 0 {
 		colorQuery = fmt.Sprintf("&serviceColor=%s", serviceColor)
 	}
-	resp, err := httpGet(fmt.Sprintf(
+	proxyUrl := fmt.Sprintf(
 		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s%s&servicePath=%s",
 		address,
 		serviceName,
 		colorQuery,
 		strings.Join(servicePath, ","),
-	))
+	)
+	logPrintln("Sending request to %s to reconfigure the proxy", proxyUrl)
+	resp, err := httpGet(proxyUrl)
 	if err != nil {
 		return fmt.Errorf("The request to reconfigure the proxy failed\n%s\n", err.Error())
 	}
