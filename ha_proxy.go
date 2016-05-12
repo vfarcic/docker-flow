@@ -81,7 +81,7 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 		colorQuery,
 		strings.Join(servicePath, ","),
 	)
-	logPrintln("Sending request to %s to reconfigure the proxy", proxyUrl)
+	logPrintf("Sending request to %s to reconfigure the proxy", proxyUrl)
 	resp, err := httpGet(proxyUrl)
 	if err != nil {
 		return fmt.Errorf("The request to reconfigure the proxy failed\n%s\n", err.Error())

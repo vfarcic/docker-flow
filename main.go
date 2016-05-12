@@ -15,6 +15,7 @@ func init() {
 
 var logFatal = log.Fatal
 var logPrintln = log.Println
+var logPrintf = log.Printf
 var deployed = false
 
 func main() {
