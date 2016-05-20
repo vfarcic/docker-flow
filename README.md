@@ -333,44 +333,47 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 
 |Command argument                     |Description|
 |-------------------------------------|-----------|
-|-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
+|-b, --blue-green                     |Perform blue-green deployment. (**bool**)|
 |    --cert-path=                     |Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead.|
 |-f, --compose-path=docker-compose.yml|Path to the Docker Compose configuration file. (default: docker-compose.yml)|
-|-b, --blue-green                     |Perform blue-green deployment. (**bool**)|
-|-t, --target=                        |Docker Compose target. (default: app)|
-|-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
-|-S, --pull-side-targets              |Pull side or auxiliary targets. (**bool**)|
-|-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
 |-c, --consul-address=                |The address of the Consul server.|
-|-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
+|    --consul-template-path=          |The path to the Consul Template. If specified, proxy template will be loaded from the specified file.|
 |-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(default: [deploy]) (**multi**)|
-|    --proxy-host=                    |The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used.|
-|    --proxy-docker-host=             |Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used.|
-|    --proxy-docker-cert-path=        |Docker certification path for the proxy host.|
-|    --proxy-reconf-port=             |The port used by the proxy to reconfigure its configuration|
-|    --service-path=                  |Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used. (**multi**)|
 |-h, --help                           |Show this help message|
+|-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
+|-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
+|    --proxy-docker-cert-path=        |Docker certification path for the proxy host.|
+|    --proxy-docker-host=             |Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used.|
+|    --proxy-host=                    |The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used.|
+|    --proxy-reconf-port=             |The port used by the proxy to reconfigure its configuration|
+|-S, --pull-side-targets              |Pull side or auxiliary targets. (**bool**)|
+|-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
+|    --service-path=                  |Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used. (**multi**)|
+|-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
+|-t, --target=                        |Docker Compose target. (default: app)|
 
 ### Mappings from command line arguments to YML and environment variables
 
 |Command argument                     |YML                   |Environment variable       |
 |-------------------------------------|----------------------|---------------------------|
-|-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
+|-b, --blue-green                     |blue_green            |FLOW_BLUE_GREEN            |
 |    --cert-path=                     |cert_path             |FLOW_CERT_PATH             |
 |-f, --compose-path=docker-compose.yml|compose_path          |FLOW_COMPOSE_PATH          |
-|-b, --blue-green                     |blue_green            |FLOW_BLUE_GREEN            |
-|-t, --target=                        |target                |FLOW_TARGET                |
-|-T, --side-target=                   |side_targets          |FLOW_SIDE_TARGETS          |
-|-S, --pull-side-targets              |pull_side_targets     |FLOW_PULL_SIDE_TARGETS     |
-|-p, --project=                       |project               |FLOW_PROJECT               |
 |-c, --consul-address=                |consul_address        |FLOW_CONSUL_ADDRESS        |
-|-s, --scale=                         |scale                 |SCALE                      |
+|    --consul-template-path=          |consul_template_path  |FLOW_CONSUL_TEMPLATE_PATH  |
 |-F, --flow=                          |flow                  |FLOW                       |
-|    --proxy-host=                    |proxy_host            |FLOW_PROXY_HOST            |
-|    --proxy-docker-host=             |proxy_docker_host|FLOW_PROXY_DOCKER_HOST          |
+|-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
+|-p, --project=                       |project               |FLOW_PROJECT               |
 |    --proxy-docker-cert-path=        |proxy_docker_cert_path|FLOW_PROXY_DOCKER_CERT_PATH|
+|    --proxy-docker-host=             |proxy_docker_host|FLOW_PROXY_DOCKER_HOST          |
+|    --proxy-host=                    |proxy_host            |FLOW_PROXY_HOST            |
 |    --proxy-reconf-port=             |proxy_reconf_port     |FLOW_PROXY_RECONF_PORT     |
+|-S, --pull-side-targets              |pull_side_targets     |FLOW_PULL_SIDE_TARGETS     |
+|-s, --scale=                         |scale                 |SCALE                      |
 |    --service-path=                  |service_path          |FLOW_SERVICE_PATH          |
+|-T, --side-target=                   |side_targets          |FLOW_SIDE_TARGETS          |
+|-t, --target=                        |target                |FLOW_TARGET                |
+
 
 Arguments can be strings, boolean, or multiple values. Command line arguments of boolean type do not have any value (i.e. *--blue-green*). Environment variables and YML arguments of boolean type should use *true* as value (i.e. *FLOW_BLUE_GREEN=true* and *blue_green: true*). When allowed, multiple values can be specified by repeating the command line argument (e.g. *--flow=deploy --flow=stop-old*). When specified through environment variables, multiple values should be separated with comma (e.g. *FLOW=deploy,stop-old*). YML accepts multiple values through the standard format.
 

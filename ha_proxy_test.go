@@ -59,6 +59,11 @@ func (s *HaProxyTestSuite) SetupTest() {
 	}
 	logPrintln = func(v ...interface{}) {}
 	sleep = func(d time.Duration) {}
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		return nil, nil
+	}
 }
 
 // Provision
@@ -223,25 +228,25 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenStartFailure() {
 // Reconfigure
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProxyHostIsEmpty() {
-	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProjectIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, []string{""})
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, []string{""}, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenReconfPortIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
@@ -263,7 +268,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
@@ -284,7 +289,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest_WithOutColor_WhenNot
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "", s.ServicePath)
+	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "", s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
@@ -305,7 +310,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithPrependedHttp() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, "", s.ServicePath)
+	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, "", s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
@@ -317,20 +322,86 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenRequestFails() {
 		return nil, fmt.Errorf("This is an error")
 	}
 
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenResponseCodeIsNot2xx() {
-	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 
-	err := HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure(server.URL, "", s.Project, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReadsConsulTemplatePath() {
+	consulTemplatePath := "/path/to/consul/template"
+	actual := ""
+	readConsulTemplate = func(fileName string) ([]byte, error) {
+		actual = fileName
+		return []byte(""), nil
+	}
+
+	HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.Color, s.ServicePath, consulTemplatePath)
+
+	s.Equal(consulTemplatePath, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenReadingConsulTemplatePathFails() {
+	consulTemplatePath := "/path/to/consul/template"
+	readConsulTemplateOrig := readConsulTemplate
+	defer func() { readConsulTemplate = readConsulTemplateOrig }()
+	readConsulTemplate = func(fileName string) ([]byte, error) {
+		return []byte(""), fmt.Errorf("This is an error")
+	}
+
+	err := HaProxy{}.Reconfigure(s.Server.URL, "", s.Project, s.Color, s.ServicePath, consulTemplatePath)
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_TransfersConsulTemplateToTheProxy() {
+	consulTemplate := `This is a 'consul' template`
+	consulTemplatePath := "/path/to/consul/template"
+	var actual []string
+	command := fmt.Sprintf("echo '%s'", `This is a \'consul\' template`)
+	expected := []string{"docker", "exec", "-it", "docker-flow-proxy", command}
+	runHaProxyExecCmd = func(cmd *exec.Cmd) error {
+		actual = cmd.Args
+		return nil
+	}
+	readConsulTemplate = func(fileName string) ([]byte, error) {
+		return []byte(consulTemplate), nil
+	}
+
+	HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.Color, s.ServicePath, consulTemplatePath)
+
+	s.Equal(expected, actual)
+}
+
+//func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithConsulTemplatePath_WhenSpecified() {
+//	actual := ""
+//	expected := fmt.Sprintf(
+//		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&consulTemplatePath=%s",
+//		s.ProxyHost,
+//		s.ReconfPort,
+//		s.Project,
+//		s.ConsulTemplatePath,
+//	)
+//	httpGetOrig := httpGet
+//	defer func() { httpGet = httpGetOrig }()
+//	httpGet = func(url string) (resp *http.Response, err error) {
+//		actual = url
+//		return nil, fmt.Errorf("This is an error")
+//	}
+//
+//	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+//
+//	s.Equal(expected, actual)
+//}
 
 // Suite
 

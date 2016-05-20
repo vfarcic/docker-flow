@@ -33,7 +33,6 @@ func (c Consul) GetScaleCalc(address, serviceName, scale string) (int, error) {
 		}
 	}
 	total := s + inc
-	fmt.Println(string(total))
 	if total <= 0 {
 		return 1, nil
 	}

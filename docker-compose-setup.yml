@@ -10,9 +10,29 @@ services:
       - 8300:8300
     command: -server -bootstrap
 
+  consul-server:
+    container_name: consul
+    image: consul
+    network_mode: host
+    environment:
+      - 'CONSUL_LOCAL_CONFIG={"skip_leave_on_interrupt": true}'
+    command: agent -server -bind=$HOST_IP -bootstrap-expect=1 -client=$HOST_IP
+
   registrator:
     container_name: registrator
     image: gliderlabs/registrator
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock
-    command: -ip $DOCKER_IP consul://$CONSUL_IP:8500
+    command: -ip $HOST_IP consul://$CONSUL_IP:8500
+
+  proxy:
+    container_name: docker-flow-proxy
+    image: vfarcic/docker-flow-proxy
+    environment:
+      CONSUL_ADDRESS: $CONSUL_IP:8500
+    volumes:
+      - ./test_configs/:/consul_templates/
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080

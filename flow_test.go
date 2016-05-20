@@ -507,6 +507,7 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenDeploy() {
 		s.opts.ServiceName,
 		s.opts.NextColor,
 		s.opts.ServicePath,
+		"",
 	)
 }
 
@@ -524,6 +525,7 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenScale() {
 		s.opts.ServiceName,
 		s.opts.CurrentColor,
 		s.opts.ServicePath,
+		"",
 	)
 }
 
@@ -532,6 +534,7 @@ func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenReconfigureFails() {
 	mockObj := getProxyMock("Reconfigure")
 	mockObj.On(
 		"Reconfigure",
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

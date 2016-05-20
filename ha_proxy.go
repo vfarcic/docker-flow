@@ -20,6 +20,7 @@ var haProxy Proxy = HaProxy{}
 type HaProxy struct{}
 
 var runHaProxyRunCmd = runCmd
+var runHaProxyExecCmd = runCmd
 var runHaProxyPsCmd = runCmd
 var runHaProxyStartCmd = runCmd
 var httpGet = http.Get
@@ -53,20 +54,35 @@ func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
 	return nil
 }
 
-func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string) error {
+func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string, consulTemplatePath string) error {
+	// TODO: Only if consulTemplatePath is not empty
+	if err := m.sendConsulTemplate(consulTemplatePath); err != nil {
+		return err
+	}
 	if len(host) == 0 {
 		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
 	}
 	if len(serviceName) == 0 {
 		return fmt.Errorf("Service name is mandatory for the proxy step.")
 	}
+	// TODO: only is consultemplatepath is not set
 	if len(servicePath) == 0 {
 		return fmt.Errorf("Service path is mandatory.")
 	}
-	if len(reconfPort) == 0 {
+	if len(reconfPort) == 0 && !strings.Contains(host, ":") {
 		return fmt.Errorf("Reconfigure port is mandatory.")
 	}
-	address := fmt.Sprintf("%s:%s", host, reconfPort)
+	if err := m.sendReconfigureRequest(host, reconfPort, serviceName, serviceColor, servicePath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m HaProxy) sendReconfigureRequest(host, reconfPort, serviceName, serviceColor string, servicePath []string) error {
+	address := host
+	if len(reconfPort) > 0 {
+		address = fmt.Sprintf("%s:%s", host, reconfPort)
+	}
 	if !strings.HasPrefix(strings.ToLower(address), "http") {
 		address = fmt.Sprintf("http://%s", address)
 	}
@@ -88,8 +104,27 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("The response from the proxy was incorrect\n%s\n", err.Error())
+		return fmt.Errorf("The response from the proxy was incorrect\n%s\n", resp.StatusCode)
 	}
+	return nil
+}
+
+func (m HaProxy) sendConsulTemplate(consulTemplatePath string) error {
+	data, err := readConsulTemplate(consulTemplatePath)
+	if err != nil {
+		return err
+	}
+	// TODO: Change DOCKER_HOST
+	command := fmt.Sprintf("echo '%s'", strings.Replace(string(data), `'`, `\'`, -1))
+	args := []string{ "exec", "-it", "docker-flow-proxy", command }
+	cmd := exec.Command("docker", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	runHaProxyExecCmd(cmd)
+//	if err := runHaProxyExecCmd(cmd); err != nil {
+//		return 0, fmt.Errorf("Docker exec command failed\n%s\n%s\n", strings.Join(cmd, " "), err.Error())
+//	}
 	return nil
 }
 

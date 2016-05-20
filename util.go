@@ -8,6 +8,7 @@ import (
 )
 
 var readFile = ioutil.ReadFile
+var readConsulTemplate = ioutil.ReadFile
 var writeFile = ioutil.WriteFile
 var removeFile = os.Remove
 var execCmd = exec.Command

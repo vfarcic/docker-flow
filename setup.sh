@@ -34,7 +34,7 @@ docker-machine create -d virtualbox \
 
 eval "$(docker-machine env swarm-master)"
 
-export DOCKER_IP=$(docker-machine ip swarm-master)
+export HOST_IP=$(docker-machine ip swarm-master)
 
 docker-compose \
     -p setup \
@@ -43,7 +43,7 @@ docker-compose \
 
 eval "$(docker-machine env swarm-node-1)"
 
-export DOCKER_IP=$(docker-machine ip swarm-node-1)
+export HOST_IP=$(docker-machine ip swarm-node-1)
 
 docker-compose \
     -p setup \
@@ -52,7 +52,7 @@ docker-compose \
 
 eval "$(docker-machine env swarm-node-2)"
 
-export DOCKER_IP=$(docker-machine ip swarm-node-2)
+export HOST_IP=$(docker-machine ip swarm-node-2)
 
 docker-compose \
     -p setup \
