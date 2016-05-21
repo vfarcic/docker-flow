@@ -102,6 +102,8 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 		color = opts.NextColor
 	}
 	if err := proxy.Reconfigure(
+		opts.ProxyDockerHost,
+		opts.ProxyDockerCertPath,
 		opts.ProxyHost,
 		opts.ProxyReconfPort,
 		opts.ServiceName,

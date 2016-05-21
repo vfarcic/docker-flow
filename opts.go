@@ -38,12 +38,12 @@ type Opts struct {
 	SideTargets             []string `short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets"`
 	Target                  string   `short:"t" long:"target" description:"Docker Compose target."`
 
-	ServiceName             string
-	CurrentColor            string
-	NextColor               string
-	CurrentTarget           string
-	NextTarget              string
-	ConsulTemplate          string
+	ServiceName    string
+	CurrentColor   string
+	NextColor      string
+	CurrentTarget  string
+	NextTarget     string
+	ConsulTemplate string
 }
 
 var GetOpts = func() (Opts, error) {
@@ -122,7 +122,7 @@ func ProcessOpts(opts *Opts) (err error) {
 			return fmt.Errorf("scale must be a number or empty")
 		}
 	}
-	if (len(opts.ConsulTemplatePath) > 0) {
+	if len(opts.ConsulTemplatePath) > 0 {
 		data, err := readFile(opts.ConsulTemplatePath)
 		if err != nil {
 			return fmt.Errorf("Consul Template %s could not be loaded", opts.ConsulTemplatePath)

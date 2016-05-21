@@ -1,6 +1,6 @@
 package main
 
 type Proxy interface {
-	Provision(host, reconfPort, certPath, scAddress string) error
-	Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string, consulTemplatePath string) error
+	Provision(dockerHost, reconfPort, certPath, scAddress string) error
+	Reconfigure(dockerHost, proxyCertPath, host, reconfPort, serviceName, serviceColor string, servicePath []string, consulTemplatePath string) error
 }
