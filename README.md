@@ -101,6 +101,8 @@ Let's start by defining proxy and Consul data through environment variables.
 ```bash
 export FLOW_PROXY_HOST=$(docker-machine ip proxy)
 
+export CONSUL_IP=$(docker-machine ip proxy)
+
 export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
 
 eval "$(docker-machine env proxy)"
