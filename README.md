@@ -340,7 +340,7 @@ After the tests are run, we have two paths we can take. If one of the tests fail
 
 ### Using custom Consul templates
 
-While, in most cases, automatic proxy configuration is all you need, you might have a special use case that would benefit from custom Consul templates. In such a case, you'd prepare your own templates and let *Docker Flow* use them throughout the process.
+While, in most cases, the automatic proxy configuration is all you need, you might have a particular use case that would benefit from custom Consul templates. In such a case, you'd prepare your own templates and let *Docker Flow* use them throughout the process.
 
 For more information regarding templating format, please visit the [Consul Template](https://github.com/hashicorp/consul-template) project.
 
