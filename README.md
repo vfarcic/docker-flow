@@ -362,6 +362,24 @@ Let's confirm whether the proxy was indeed configured correctly.
 curl -i $PROXY_IP/demo/hello
 ```
 
+The content of the [test_configs/tmpl/go-demo-app.tmpl](https://github.com/vfarcic/docker-flow/blob/master/test_configs/tmpl/go-demo-app.tmpl) file is as follows.
+
+```
+frontend go-demo-app-fe
+	bind *:80
+	bind *:443
+	option http-server-close
+	acl url_test-service path_beg /demo
+	use_backend go-demo-app-be if url_test-service
+
+backend go-demo-app-be
+	{{ range $i, $e := service "SERVICE_NAME" "any" }}
+	server {{$e.Node}}_{{$i}}_{{$e.Port}} {{$e.Address}}:{{$e.Port}} check
+	{{end}}
+```
+
+It is a standard Consul template file with one exception. *SERVICE_NAME* will be replaced with the name of the service. You are free to create the Consul template in any form that suits you.
+
 That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
 
 Usage
