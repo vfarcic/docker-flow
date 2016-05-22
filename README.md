@@ -4,6 +4,14 @@ Docker Flow
 * [Introduction](#introduction)
 * [Examples](#examples)
 * [Usage](#usage)
+
+  * [Setting it up](#setting-it-up)
+  * [Reconfiguring proxy after deployment](#reconfiguring-proxy-after-deployment)
+  * [Deploying a new release without downtime](#deploying-a-new-release-without-downtime)
+  * [Scaling the service](#scaling-the-service)
+  * [Testing deployments to production](#testing-deployments-to-production)
+  * [Using custom Consul templates](#using-custom-consul-templates)
+
 * [Feedback and Contribution](#feedback-and-contribution)
 
 Introduction
@@ -102,9 +110,11 @@ With the cluster and the proxy server set up, we are ready to give **Docker Flow
 Let's start by defining proxy and Consul data through environment variables.
 
 ```bash
-export FLOW_PROXY_HOST=$(docker-machine ip proxy)
+export PROXY_IP=$(docker-machine ip proxy)
 
 export CONSUL_IP=$(docker-machine ip proxy)
+
+export FLOW_PROXY_HOST=$(docker-machine ip proxy)
 
 export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
 
@@ -125,7 +135,7 @@ eval "$(docker-machine env --swarm swarm-master)"
 ./docker-flow \
     --blue-green \
     --target=app \
-    --service-path="/api/v1/books" \
+    --service-path="/demo" \
     --side-target=db \
     --flow=deploy --flow=proxy
 ```
@@ -141,9 +151,9 @@ docker ps --format "table {{.Names}}\t{{.Image}}"
 The output of the `ps` command is as follows.
 
 ```
-NAMES                                IMAGE
-swarm-node-2/dockerflow_app-blue_1   vfarcic/books-ms
-swarm-node-1/books-ms-db             mongo
+NAMES                                 IMAGE
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo
+swarm-node-1/dockerflow_db_1          mongo
 ...
 ```
 
@@ -162,7 +172,7 @@ The output of the `ps` command is as follows.
 ```
 NAMES               IMAGE
 docker-flow-proxy   vfarcic/docker-flow-proxy
-consul              progrium/consul
+consul              consul
 ```
 
 *Docker Flow* detected that there was no *proxy* on that node and run it for us. The *docker-flow-proxy* container contains *HAProxy* together with custom code that reconfigures it every time a new service is run. For more information about the *Docker Flow: Proxy*, please read the [project README](https://github.com/vfarcic/docker-flow-proxy).
@@ -170,18 +180,18 @@ consul              progrium/consul
 Since we instructed Swarm to run our service somewhere inside the cluster, we could not know in advance which server will be chosen. In this particular case, our service ended up running inside the *swarm-node-2*. Moreover, to avoid potential conflicts and allow easier scaling, we did not specify which port the service should expose. In other words, both the IP and the port of the service were not defined in advance. Among other things, *Docker Flow* solves this by running *Docker Flow: Proxy* and instructing it to reconfigure itself with the information gathered after the container is run. We can confirm that the proxy reconfiguration was indeed successful by sending an HTTP request to the newly deployed service.
 
 ```bash
-curl -I $PROXY_IP/api/v1/books
+curl -i $PROXY_IP/demo/hello
 ```
 
 The output of the `curl` command is as follows.
 
 ```
 HTTP/1.1 200 OK
-Server: spray-can/1.3.1
-Date: Thu, 07 Apr 2016 19:23:34 GMT
-Access-Control-Allow-Origin: *
-Content-Type: application/json; charset=UTF-8
-Content-Length: 2
+Date: Sun, 22 May 2016 17:23:41 GMT
+Content-Length: 14
+Content-Type: text/plain; charset=utf-8
+
+hello, world!
 ```
 
 Even though our service is running in one of the servers chosen by Swarm and is exposing a random port, the proxy was reconfigured and we can access it through a fixed IP and without a port (to be more precise through standard HTTP port 80 or HTTPS port 443).
@@ -198,7 +208,7 @@ side_targets:
   - db
 blue_green: true
 service_path:
-  - /api/v1/books
+  - /demo
 ```
 
 Let's run the new release.
@@ -220,9 +230,9 @@ The output of the `ps` command is as follows.
 
 ```bash
 NAMES                                 IMAGE                    STATUS
-swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 52 seconds
-swarm-node-2/dockerflow_app-blue_1    vfarcic/books-ms         Exited (137) 54 seconds ago
-swarm-node-1/books-ms-db              mongo                    Up About an hour
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo          Up 7 seconds
+swarm-master/dockerflow_app-blue_1    vfarcic/go-demo          Exited (2) 6 seconds ago
+swarm-node-1/dockerflow_db_1          mongo                    Up 12 minutes
 ...
 ```
 
@@ -231,18 +241,18 @@ From the output, we can observe that the new release (*green*) is running and th
 Let's confirm that the proxy was reconfigured as well.
 
 ```bash
-curl -I $PROXY_IP/api/v1/books
+curl -i $PROXY_IP/demo/hello
 ```
 
 The output of the `curl` command is as follows.
 
 ```
 HTTP/1.1 200 OK
-Server: spray-can/1.3.1
-Date: Thu, 07 Apr 2016 19:45:07 GMT
-Access-Control-Allow-Origin: *
-Content-Type: application/json; charset=UTF-8
-Content-Length: 2
+Date: Sun, 22 May 2016 17:25:19 GMT
+Content-Length: 14
+Content-Type: text/plain; charset=utf-8
+
+hello, world!
 ```
 
 The new release was deployed without any downtime and the proxy has been reconfigured to redirect all requests to it.
@@ -269,9 +279,9 @@ The output of the `ps` command is as follows.
 
 ```
 NAMES                                 IMAGE                    STATUS
-swarm-node-2/dockerflow_app-green_2   vfarcic/books-ms         Up About a minute
-swarm-master/dockerflow_app-green_3   vfarcic/books-ms         Up About a minute
-swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 33 minutes
+swarm-node-2/dockerflow_app-green_3   vfarcic/go-demo          Up 8 seconds
+swarm-node-1/dockerflow_app-green_2   vfarcic/go-demo          Up 8 seconds
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo          Up About a minute
 ```
 
 The number of instances was increased by two. While only one instance was running before, now we have three.
@@ -309,10 +319,11 @@ The output of the `ps` command is as follows.
 
 ```
 NAMES                                 STATUS              PORTS
-swarm-node-2/dockerflow_app-blue_1    Up 5 minutes        192.168.99.103:32770->8080/tcp
-swarm-node-1/dockerflow_app-blue_2    Up 5 minutes        192.168.99.102:32773->8080/tcp
-swarm-node-1/dockerflow_app-green_1   Up About an hour    192.168.99.102:32768->8080/tcp
-swarm-node-2/dockerflow_app-green_2   Up About an hour    192.168.99.103:32763->8080/tcp
+swarm-master/dockerflow_app-blue_2    Up 8 seconds        192.168.99.101:32769->8080/tcp
+swarm-node-2/dockerflow_app-blue_1    Up 9 seconds        192.168.99.103:32771->8080/tcp
+swarm-node-1/dockerflow_app-green_2   Up About a minute   192.168.99.102:32768->8080/tcp
+swarm-node-2/dockerflow_app-green_1   Up 2 minutes        192.168.99.103:32769->8080/tcp
+...
 ```
 
 At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to all the instances of the old release. What this means is that the users of our service still see the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
@@ -325,6 +336,30 @@ After the tests are run, we have two paths we can take. If one of the tests fail
 ./docker-flow \
     --flow=proxy \
     --flow=stop-old
+```
+
+### Using custom Consul templates
+
+While, in most cases, automatic proxy configuration is all you need, you might have a special use case that would benefit from custom Consul templates. In such a case, you'd prepare your own templates and let *Docker Flow* use them throughout the process.
+
+For more information regarding templating format, please visit the [Consul Template](https://github.com/hashicorp/consul-template) project.
+
+The following example illustrates the usage of custom Consul templates.
+
+```bash
+eval "$(docker-machine env --swarm swarm-master)"
+
+./docker-flow \
+    --consul-template-path test_configs/tmpl/go-demo-app.tmpl \
+    --flow=deploy --flow=proxy --flow=stop-old
+```
+
+*Docker Flow* processed the template located in the `test_configs/tmpl/go-demo-app.tmpl` file and sent the result to the proxy. The rest of the process was the same as explained earlier.
+
+Let's confirm whether the proxy was indeed configured correctly.
+
+```bash
+curl -i $PROXY_IP/demo/hello
 ```
 
 That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
