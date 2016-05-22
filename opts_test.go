@@ -221,6 +221,29 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 	s.Equal(expected, s.opts.Flow)
 }
 
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFileDoesNotExist() {
+	s.opts.ConsulTemplatePath = "/this/path/does/not/exist"
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(""), fmt.Errorf("This is an error")
+	}
+
+	actual := ProcessOpts(&s.opts)
+
+	s.Error(actual)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplate_WhenConsulTemplateFileIsSpecified() {
+	expected := "This is content of a Consul Template"
+	s.opts.ConsulTemplatePath = "/this/path/does/not/exist"
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(expected), nil
+	}
+
+	ProcessOpts(&s.opts)
+
+	s.Equal(expected, s.opts.ConsulTemplate)
+}
+
 // ParseEnvVars
 
 func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
@@ -240,6 +263,7 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		{"myProxyDockerHost", "FLOW_PROXY_DOCKER_HOST", &s.opts.ProxyDockerHost},
 		{"myProxyCertPath", "FLOW_PROXY_DOCKER_CERT_PATH", &s.opts.ProxyDockerCertPath},
 		{"4357", "FLOW_PROXY_RECONF_PORT", &s.opts.ProxyReconfPort},
+		{"myConsulTemplatePath", "FLOW_CONSUL_TEMPLATE_PATH", &s.opts.ConsulTemplatePath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -331,6 +355,7 @@ func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
 		{"proxyHostFromArgs", "proxy-docker-host", &s.opts.ProxyDockerHost},
 		{"proxyCertPathFromArgs", "proxy-docker-cert-path", &s.opts.ProxyDockerCertPath},
 		{"1234", "proxy-reconf-port", &s.opts.ProxyReconfPort},
+		{"consulTemplatePathFromArgs", "consul-template-path", &s.opts.ConsulTemplatePath},
 	}
 
 	for _, d := range data {
@@ -511,6 +536,7 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	proxyDockerHost := "proxyDomainFromYml"
 	proxyDockerCertPath := "proxyCertPathFromYml"
 	proxyReconfPort := "1245"
+	consulTemplatePath := "/path/to/consul/template"
 	yml := fmt.Sprintf(`
 host: %s
 cert_path: %s
@@ -535,11 +561,11 @@ flow:
 service_path:
   - %s
   - %s
-`,
+consul_template_path: %s`,
 		host, certPath, composePath, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
 		proxyDockerCertPath, proxyReconfPort, flow1, flow2, path1,
-		path2,
+		path2, consulTemplatePath,
 	)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
@@ -562,6 +588,7 @@ service_path:
 	s.Equal(proxyReconfPort, s.opts.ProxyReconfPort)
 	s.Equal([]string{flow1, flow2}, s.opts.Flow)
 	s.Equal([]string{path1, path2}, s.opts.ServicePath)
+	s.Equal(consulTemplatePath, s.opts.ConsulTemplatePath)
 }
 
 // GetOpts

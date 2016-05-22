@@ -4,12 +4,14 @@ docker-machine create -d virtualbox proxy
 
 export CONSUL_IP=$(docker-machine ip proxy)
 
+export HOST_IP=$(docker-machine ip proxy)
+
 eval "$(docker-machine env proxy)"
 
 docker-compose \
     -p setup \
     -f docker-compose-setup.yml \
-    up -d consul
+    up -d consul-server
 
 docker-machine create -d virtualbox \
     --swarm --swarm-master \
@@ -34,7 +36,7 @@ docker-machine create -d virtualbox \
 
 eval "$(docker-machine env swarm-master)"
 
-export DOCKER_IP=$(docker-machine ip swarm-master)
+export HOST_IP=$(docker-machine ip swarm-master)
 
 docker-compose \
     -p setup \
@@ -43,7 +45,7 @@ docker-compose \
 
 eval "$(docker-machine env swarm-node-1)"
 
-export DOCKER_IP=$(docker-machine ip swarm-node-1)
+export HOST_IP=$(docker-machine ip swarm-node-1)
 
 docker-compose \
     -p setup \
@@ -52,7 +54,7 @@ docker-compose \
 
 eval "$(docker-machine env swarm-node-2)"
 
-export DOCKER_IP=$(docker-machine ip swarm-node-2)
+export HOST_IP=$(docker-machine ip swarm-node-2)
 
 docker-compose \
     -p setup \

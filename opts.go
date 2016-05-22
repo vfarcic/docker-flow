@@ -20,27 +20,30 @@ var parseArgs = ParseArgs
 var processOpts = ProcessOpts
 
 type Opts struct {
-	Host                    string   `short:"H" long:"host" description:"Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead."`
+	BlueGreen               bool     `short:"b" long:"blue-green" description:"Perform blue-green deployment." yaml:"blue_green" envconfig:"blue_green"`
 	CertPath                string   `long:"cert-path" description:"Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead." yaml:"cert_path" envconfig:"cert_path"`
 	ComposePath             string   `short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file." yaml:"compose_path" envconfig:"compose_path"`
-	BlueGreen               bool     `short:"b" long:"blue-green" description:"Perform blue-green deployment." yaml:"blue_green" envconfig:"blue_green"`
-	Target                  string   `short:"t" long:"target" description:"Docker Compose target."`
-	SideTargets             []string `short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets"`
-	PullSideTargets         bool     `short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
-	Project                 string   `short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ServiceDiscoveryAddress string   `short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
-	Scale                   string   `short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number." yaml:"scale" envconfig:"scale"`
+	ConsulTemplatePath      string   `long:"consul-template-path" description:"The path to the Consul Template. If specified, proxy template will be loaded from the specified file." yaml:"consul_template_path" envconfig:"consul_template_path"`
 	Flow                    []string `short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\nproxy: Reconfigures the proxy\n" yaml:"flow" envconfig:"flow"`
-	ProxyHost               string   `long:"proxy-host" description:"The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used." yaml:"proxy_host" envconfig:"proxy_host"`
-	ProxyDockerHost         string   `long:"proxy-docker-host" description:"Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used." yaml:"proxy_docker_host" envconfig:"proxy_docker_host"`
+	Host                    string   `short:"H" long:"host" description:"Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead."`
+	Project                 string   `short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ProxyDockerCertPath     string   `long:"proxy-docker-cert-path" description:"Docker certification path for the proxy host." yaml:"proxy_docker_cert_path" envconfig:"proxy_docker_cert_path"`
+	ProxyDockerHost         string   `long:"proxy-docker-host" description:"Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used." yaml:"proxy_docker_host" envconfig:"proxy_docker_host"`
+	ProxyHost               string   `long:"proxy-host" description:"The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used." yaml:"proxy_host" envconfig:"proxy_host"`
 	ProxyReconfPort         string   `long:"proxy-reconf-port" description:"The port used by the proxy to reconfigure its configuration" yaml:"proxy_reconf_port" envconfig:"proxy_reconf_port"`
+	PullSideTargets         bool     `short:"S" long:"pull-side-targets" description:"Pull side or auxiliary targets." yaml:"pull_side_targets" envconfig:"pull_side_targets"`
+	Scale                   string   `short:"s" long:"scale" description:"Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number." yaml:"scale" envconfig:"scale"`
 	ServicePath             []string `long:"service-path" description:"Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used." yaml:"service_path"`
-	ServiceName             string
-	CurrentColor            string
-	NextColor               string
-	CurrentTarget           string
-	NextTarget              string
+	SideTargets             []string `short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets"`
+	Target                  string   `short:"t" long:"target" description:"Docker Compose target."`
+
+	ServiceName    string
+	CurrentColor   string
+	NextColor      string
+	CurrentTarget  string
+	NextTarget     string
+	ConsulTemplate string
 }
 
 var GetOpts = func() (Opts, error) {
@@ -114,10 +117,17 @@ func ProcessOpts(opts *Opts) (err error) {
 	if len(opts.ServiceDiscoveryAddress) == 0 {
 		return fmt.Errorf("consul-address argument is required")
 	}
-	if len(opts.Scale) != 0 {
+	if len(opts.Scale) > 0 {
 		if _, err := strconv.Atoi(opts.Scale); err != nil {
 			return fmt.Errorf("scale must be a number or empty")
 		}
+	}
+	if len(opts.ConsulTemplatePath) > 0 {
+		data, err := readFile(opts.ConsulTemplatePath)
+		if err != nil {
+			return fmt.Errorf("Consul Template %s could not be loaded", opts.ConsulTemplatePath)
+		}
+		opts.ConsulTemplate = string(data)
 	}
 	if len(opts.Flow) == 0 {
 		opts.Flow = []string{"deploy"}

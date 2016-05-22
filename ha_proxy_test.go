@@ -14,40 +14,42 @@ import (
 
 type HaProxyTestSuite struct {
 	suite.Suite
-	ScAddress     string
-	Host          string
-	CertPath      string
-	ExitedMessage string
-	ProxyHost     string
-	Project       string
-	Color         string
-	ServicePath   []string
-	ReconfPort    string
-	Server        *httptest.Server
+	ScAddress      string
+	CertPath       string
+	ExitedMessage  string
+	Host           string
+	ServiceName    string
+	Color          string
+	ServicePath    []string
+	ReconfPort     string
+	DockerHost     string
+	DockerCertPath string
+	Server         *httptest.Server
 }
 
 func (s *HaProxyTestSuite) SetupTest() {
 	s.ScAddress = "1.2.3.4:1234"
-	s.Host = "tcp://my-docker-proxy-host"
-	s.ProxyHost = "http://my-docker-proxy-host.com"
-	s.Project = "myProject"
+	s.ServiceName = "my-service"
 	s.Color = "purpurina"
 	s.ServicePath = []string{"/path/to/my/service", "/path/to/my/other/service"}
 	s.ExitedMessage = "Exited (2) 15 seconds ago"
 	s.ReconfPort = "5362"
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reconfigureUrl := fmt.Sprintf(
-			"/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
-			s.Project,
+			"/v1/docker-flow-proxy/reconfigure",
+			s.ServiceName,
 			strings.Join(s.ServicePath, ","),
 		)
 		actualUrl := fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
 		if r.Method == "GET" {
-			if actualUrl == reconfigureUrl {
+			if strings.HasPrefix(actualUrl, reconfigureUrl) {
 				w.WriteHeader(http.StatusOK)
 			}
 		}
 	}))
+	s.DockerHost = "tcp://my-docker-proxy-host"
+	s.DockerCertPath = "/path/to/pem"
+	s.Host = "http://my-docker-proxy-host.com"
 	runHaProxyRunCmd = func(cmd *exec.Cmd) error {
 		return nil
 	}
@@ -57,14 +59,19 @@ func (s *HaProxyTestSuite) SetupTest() {
 	runHaProxyStartCmd = func(cmd *exec.Cmd) error {
 		return nil
 	}
-	logPrintln = func(v ...interface{}) {}
-	sleep = func(d time.Duration) {}
+	httpGetOrig := httpGet
+	defer func() { httpGet = httpGetOrig }()
+	httpGet = func(url string) (resp *http.Response, err error) {
+		return nil, nil
+	}
 }
 
 // Provision
 
 func (s HaProxyTestSuite) Test_Provision_SetsDockerHost() {
 	actual := ""
+	SetDockerHostOrig := SetDockerHost
+	defer func() { SetDockerHost = SetDockerHostOrig }()
 	SetDockerHost = func(host, certPath string) {
 		actual = host
 	}
@@ -134,7 +141,7 @@ func (s HaProxyTestSuite) Test_Provision_RunsDockerPs() {
 
 func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenPsFailure() {
 	runHaProxyPsCmd = func(cmd *exec.Cmd) error {
-		return fmt.Errorf("This is an error")
+		return fmt.Errorf("This is an docker ps error")
 	}
 
 	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
@@ -144,7 +151,7 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenPsFailure() {
 
 func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenProxyFails() {
 	runHaProxyPsCmd = func(cmd *exec.Cmd) error {
-		return fmt.Errorf("This is an error")
+		return fmt.Errorf("This is an docker ps error")
 	}
 
 	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
@@ -212,7 +219,7 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenStartFailure() {
 		return nil
 	}
 	runHaProxyStartCmd = func(cmd *exec.Cmd) error {
-		return fmt.Errorf("This is an error")
+		return fmt.Errorf("This is an docker start error")
 	}
 
 	err := HaProxy{}.Provision(s.Host, s.ReconfPort, s.CertPath, s.ScAddress)
@@ -223,25 +230,25 @@ func (s HaProxyTestSuite) Test_Provision_ReturnsError_WhenStartFailure() {
 // Reconfigure
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProxyHostIsEmpty() {
-	err := HaProxy{}.Reconfigure("", s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", "", "", s.ReconfPort, s.ServiceName, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenProjectIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, "", s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", "", s.Host, s.ReconfPort, "", s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
-func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, []string{""})
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenServicePathAndConsulTemplatePathAreEmpty() {
+	err := HaProxy{}.Reconfigure("", "", s.Host, s.ReconfPort, s.ServiceName, s.Color, []string{""}, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenReconfPortIsEmpty() {
-	err := HaProxy{}.Reconfigure(s.ProxyHost, "", s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", "", s.Host, "", s.ServiceName, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
@@ -250,9 +257,9 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 	actual := ""
 	expected := fmt.Sprintf(
 		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&serviceColor=%s&servicePath=%s",
-		s.ProxyHost,
+		s.Host,
 		s.ReconfPort,
-		s.Project,
+		s.ServiceName,
 		s.Color,
 		strings.Join(s.ServicePath, ","),
 	)
@@ -260,31 +267,31 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest() {
 	defer func() { httpGet = httpGetOrig }()
 	httpGet = func(url string) (resp *http.Response, err error) {
 		actual = url
-		return nil, fmt.Errorf("This is an error")
+		return nil, fmt.Errorf("This is an HTTP error")
 	}
 
-	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	HaProxy{}.Reconfigure("", "", s.Host, s.ReconfPort, s.ServiceName, s.Color, s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
 
-func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequest_WithOutColor_WhenNotBlueGreen() {
+func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithOutColor_WhenNotBlueGreen() {
 	actual := ""
 	expected := fmt.Sprintf(
 		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
-		s.ProxyHost,
+		s.Host,
 		s.ReconfPort,
-		s.Project,
+		s.ServiceName,
 		strings.Join(s.ServicePath, ","),
 	)
 	httpGetOrig := httpGet
 	defer func() { httpGet = httpGetOrig }()
 	httpGet = func(url string) (resp *http.Response, err error) {
 		actual = url
-		return nil, fmt.Errorf("This is an error")
+		return nil, fmt.Errorf("This is an HTTP error")
 	}
 
-	HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, "", s.ServicePath)
+	HaProxy{}.Reconfigure("", "", s.Host, s.ReconfPort, s.ServiceName, "", s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
@@ -293,19 +300,19 @@ func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithPrependedHttp() {
 	actual := ""
 	expected := fmt.Sprintf(
 		"%s:%s/v1/docker-flow-proxy/reconfigure?serviceName=%s&servicePath=%s",
-		s.ProxyHost,
+		s.Host,
 		s.ReconfPort,
-		s.Project,
+		s.ServiceName,
 		strings.Join(s.ServicePath, ","),
 	)
 	httpGetOrig := httpGet
 	defer func() { httpGet = httpGetOrig }()
 	httpGet = func(url string) (resp *http.Response, err error) {
 		actual = url
-		return nil, fmt.Errorf("This is an error")
+		return nil, fmt.Errorf("This is an HTTP error")
 	}
 
-	HaProxy{}.Reconfigure("my-docker-proxy-host.com", s.ReconfPort, s.Project, "", s.ServicePath)
+	HaProxy{}.Reconfigure("", "", "my-docker-proxy-host.com", s.ReconfPort, s.ServiceName, "", s.ServicePath, "")
 
 	s.Equal(expected, actual)
 }
@@ -314,29 +321,195 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenRequestFails() {
 	httpGetOrig := httpGet
 	defer func() { httpGet = httpGetOrig }()
 	httpGet = func(url string) (resp *http.Response, err error) {
-		return nil, fmt.Errorf("This is an error")
+		return nil, fmt.Errorf("This is an HTTP error")
 	}
 
-	err := HaProxy{}.Reconfigure(s.ProxyHost, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", "", s.Host, s.ReconfPort, s.ServiceName, s.Color, s.ServicePath, "")
 
 	s.Error(err)
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenResponseCodeIsNot2xx() {
-	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 
-	err := HaProxy{}.Reconfigure(s.Server.URL, s.ReconfPort, s.Project, s.Color, s.ServicePath)
+	err := HaProxy{}.Reconfigure("", "", server.URL, "", s.ServiceName, s.Color, s.ServicePath, "")
 
 	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_SetsDockerHost_WhenConsulTemplatePathIsPresent() {
+	os.Unsetenv("DOCKER_HOST")
+
+	err := HaProxy{}.Reconfigure(s.DockerHost, s.DockerCertPath, s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.NoError(err)
+	s.Equal(s.DockerHost, os.Getenv("DOCKER_HOST"))
+	s.Equal(s.DockerCertPath, os.Getenv("DOCKER_CERT_PATH"))
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_CreatesConsulTemplatesDirectory_WhenConsulTemplatePathIsPresent() {
+	var actual []string
+	expected := []string{"docker", "exec", "-i", "docker-flow-proxy", "mkdir", "-p", "/consul_templates"}
+	runHaProxyExecCmd = func(cmd *exec.Cmd) error {
+		actual = cmd.Args
+		return nil
+	}
+
+	HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenDirectoryCreationFails() {
+	runHaProxyExecCmdOrig := runHaProxyExecCmd
+	defer func() { runHaProxyExecCmd = runHaProxyExecCmdOrig }()
+	runHaProxyExecCmd = func(cmd *exec.Cmd) error {
+		return fmt.Errorf("This is an docker exec error")
+	}
+
+	actual := HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Error(actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_CopiesTemplate_WhenConsulTemplatePathIsPresent() {
+	consulTemplatePath := "/path/to/consul/template"
+	var actual []string
+	expected := []string{
+		"docker",
+		"cp",
+		fmt.Sprintf("%s.tmp", consulTemplatePath),
+		fmt.Sprintf("docker-flow-proxy:/consul_templates/%s.tmpl", s.ServiceName),
+	}
+	runHaProxyCpCmdOrig := runHaProxyCpCmd
+	defer func() { runHaProxyCpCmd = runHaProxyCpCmdOrig }()
+	runHaProxyCpCmd = func(cmd *exec.Cmd) error {
+		actual = cmd.Args
+		return nil
+	}
+
+	HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTemplateCopyFails() {
+	runHaProxyCpCmdOrig := runHaProxyCpCmd
+	defer func() { runHaProxyCpCmd = runHaProxyCpCmdOrig }()
+	runHaProxyCpCmd = func(cmd *exec.Cmd) error {
+		return fmt.Errorf("This is an docker cp error")
+	}
+
+	actual := HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Error(actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_SendsHttpRequestWithConsulTemplatePath_WhenSpecified() {
+	actual := ""
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		actual = fmt.Sprintf("%s?%s", r.URL.Path, r.URL.RawQuery)
+	}))
+	expected := fmt.Sprintf(
+		"/v1/docker-flow-proxy/reconfigure?serviceName=%s&consulTemplatePath=/consul_templates/%s.tmpl",
+		s.ServiceName,
+		s.ServiceName,
+	)
+
+	HaProxy{}.Reconfigure("", "", server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Equal(expected, actual)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_CreatesTempTemplateFile() {
+	actualFilename := ""
+	actualData := ""
+	data := "This is a %s template"
+	expectedData := fmt.Sprintf(data, s.ServiceName+"-"+s.Color)
+	writeFileOrig := writeFile
+	defer func() { writeFile = writeFileOrig }()
+	writeFile = func(filename string, data []byte, perm os.FileMode) error {
+		actualFilename = filename
+		actualData = string(data)
+		return nil
+	}
+	readFileOrig := readFile
+	defer func() { readFile = readFileOrig }()
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(fmt.Sprintf(data, "SERVICE_NAME")), nil
+	}
+
+	HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Equal("/path/to/consul/template.tmp", actualFilename)
+	s.Equal(expectedData, actualData)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTemplateFileReadFails() {
+	readFileOrig := readFile
+	defer func() { readFile = readFileOrig }()
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(""), fmt.Errorf("This is an read file error")
+	}
+
+	err := HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTempTemplateFileCreationFails() {
+	writeFileOrig := writeFile
+	defer func() { writeFile = writeFileOrig }()
+	writeFile = func(filename string, data []byte, perm os.FileMode) error {
+		return fmt.Errorf("This is an write file error")
+	}
+
+	err := HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Error(err)
+}
+
+func (s HaProxyTestSuite) Test_Reconfigure_RemovesTempTemplateFile() {
+	path := "/path/to/consul/template"
+	expected := fmt.Sprintf("%s.tmp", path)
+	actual := ""
+	removeFileOrig := removeFile
+	defer func() { removeFile = removeFileOrig }()
+	removeFile = func(name string) error {
+		actual = name
+		return nil
+	}
+
+	HaProxy{}.Reconfigure("", "", s.Server.URL, "", s.ServiceName, s.Color, s.ServicePath, "/path/to/consul/template")
+
+	s.Equal(expected, actual)
 }
 
 // Suite
 
 func TestHaProxyTestSuite(t *testing.T) {
+	logPrintln = func(v ...interface{}) {}
+	logPrintf = func(format string, v ...interface{}) {}
+	sleep = func(d time.Duration) {}
 	dockerHost := os.Getenv("DOCKER_HOST")
 	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
+	runHaProxyExecCmd = func(cmd *exec.Cmd) error {
+		return nil
+	}
+	runHaProxyCpCmd = func(cmd *exec.Cmd) error {
+		return nil
+	}
+	writeFile = func(fileName string, data []byte, perm os.FileMode) error {
+		return nil
+	}
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(""), nil
+	}
+	removeFile = func(name string) error {
+		return nil
+	}
 	defer func() {
 		os.Setenv("DOCKER_HOST", dockerHost)
 		os.Setenv("DOCKER_CERT_PATH", dockerCertPath)

@@ -14,24 +14,27 @@ const containerStatusRunning = 1
 const containerStatusExited = 2
 const containerStatusRemoved = 3
 const ProxyReconfigureDefaultPort = 8080
+const ConsulTemplatesDir = "/consul_templates"
 
 var haProxy Proxy = HaProxy{}
 
 type HaProxy struct{}
 
 var runHaProxyRunCmd = runCmd
+var runHaProxyExecCmd = runCmd
+var runHaProxyCpCmd = runCmd
 var runHaProxyPsCmd = runCmd
 var runHaProxyStartCmd = runCmd
 var httpGet = http.Get
 
-func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
-	if len(host) == 0 {
+func (m HaProxy) Provision(dockerHost, reconfPort, certPath, scAddress string) error {
+	if len(dockerHost) == 0 {
 		return fmt.Errorf("Proxy docker host is mandatory for the proxy step. Please set the proxy-docker-host argument.")
 	}
 	if len(scAddress) == 0 {
 		return fmt.Errorf("Service Discovery Address is mandatory.")
 	}
-	SetDockerHost(host, certPath)
+	SetDockerHost(dockerHost, certPath)
 	status, err := m.ps()
 	if err != nil {
 		return err
@@ -53,34 +56,59 @@ func (m HaProxy) Provision(host, reconfPort, certPath, scAddress string) error {
 	return nil
 }
 
-func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string, servicePath []string) error {
+// TODO: Change args to struct
+func (m HaProxy) Reconfigure(
+	dockerHost, dockerCertPath, host, reconfPort, serviceName, serviceColor string,
+	servicePath []string,
+	consulTemplatePath string,
+) error {
+	if len(consulTemplatePath) > 0 {
+		if err := m.sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName, serviceColor); err != nil {
+			return err
+		}
+	} else if len(servicePath) == 0 {
+		return fmt.Errorf("It is mandatory to specify servicePath or consulTemplatePath. Please set one of the two.")
+	}
 	if len(host) == 0 {
 		return fmt.Errorf("Proxy host is mandatory for the proxy step. Please set the proxy-host argument.")
 	}
 	if len(serviceName) == 0 {
 		return fmt.Errorf("Service name is mandatory for the proxy step.")
 	}
-	if len(servicePath) == 0 {
-		return fmt.Errorf("Service path is mandatory.")
-	}
-	if len(reconfPort) == 0 {
+	if len(reconfPort) == 0 && !strings.Contains(host, ":") {
 		return fmt.Errorf("Reconfigure port is mandatory.")
 	}
-	address := fmt.Sprintf("%s:%s", host, reconfPort)
+	if err := m.sendReconfigureRequest(host, reconfPort, serviceName, serviceColor, servicePath, consulTemplatePath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m HaProxy) sendReconfigureRequest(
+	host, reconfPort, serviceName, serviceColor string,
+	servicePath []string,
+	consulTemplatePath string,
+) error {
+	address := host
+	if len(reconfPort) > 0 {
+		address = fmt.Sprintf("%s:%s", host, reconfPort)
+	}
 	if !strings.HasPrefix(strings.ToLower(address), "http") {
 		address = fmt.Sprintf("http://%s", address)
 	}
-	colorQuery := ""
-	if len(serviceColor) > 0 {
-		colorQuery = fmt.Sprintf("&serviceColor=%s", serviceColor)
-	}
 	proxyUrl := fmt.Sprintf(
-		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s%s&servicePath=%s",
+		"%s/v1/docker-flow-proxy/reconfigure?serviceName=%s",
 		address,
 		serviceName,
-		colorQuery,
-		strings.Join(servicePath, ","),
 	)
+	if len(consulTemplatePath) > 0 {
+		proxyUrl = fmt.Sprintf("%s&consulTemplatePath=%s/%s.tmpl", proxyUrl, ConsulTemplatesDir, serviceName)
+	} else {
+		if len(serviceColor) > 0 {
+			proxyUrl = fmt.Sprintf("%s&serviceColor=%s", proxyUrl, serviceColor)
+		}
+		proxyUrl = fmt.Sprintf("%s&servicePath=%s", proxyUrl, strings.Join(servicePath, ","))
+	}
 	logPrintf("Sending request to %s to reconfigure the proxy", proxyUrl)
 	resp, err := httpGet(proxyUrl)
 	if err != nil {
@@ -88,7 +116,60 @@ func (m HaProxy) Reconfigure(host, reconfPort, serviceName, serviceColor string,
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("The response from the proxy was incorrect\n%s\n", err.Error())
+		return fmt.Errorf("The request to the proxy (%s) failed with status code %d\n", proxyUrl, resp.StatusCode)
+	}
+	return nil
+}
+
+func (m HaProxy) sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName, color string) error {
+	if err := m.createTempConsulTemplate(consulTemplatePath, serviceName, color); err != nil {
+		return err
+	}
+	if err := m.copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName); err != nil {
+		return err
+	}
+	removeFile(fmt.Sprintf("%s.tmp", consulTemplatePath))
+
+	return nil
+}
+
+func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName string) error {
+	SetDockerHost(dockerHost, dockerCertPath)
+	args := []string{"exec", "-i", "docker-flow-proxy", "mkdir", "-p", ConsulTemplatesDir}
+	execCmd := exec.Command("docker", args...)
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+	// TODO: Remove. Deprecated since Docker Flow: Proxy has that directory by default.
+	if err := runHaProxyExecCmd(execCmd); err != nil {
+		return err
+	}
+	args = []string{
+		"cp",
+		fmt.Sprintf("%s.tmp", consulTemplatePath),
+		fmt.Sprintf("docker-flow-proxy:%s/%s.tmpl", ConsulTemplatesDir, serviceName),
+	}
+	cpCmd := exec.Command("docker", args...)
+	cpCmd.Stdout = os.Stdout
+	cpCmd.Stderr = os.Stderr
+	if err := runHaProxyCpCmd(cpCmd); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m HaProxy) createTempConsulTemplate(consulTemplatePath, serviceName, color string) error {
+	fullServiceName := fmt.Sprintf("%s-%s", serviceName, color)
+	tmpPath := fmt.Sprintf("%s.tmp", consulTemplatePath)
+	data, err := readFile(consulTemplatePath)
+	if err != nil {
+		return fmt.Errorf("Could not read the Consul template %s\n%s", consulTemplatePath, err.Error())
+	}
+	if err := writeFile(
+		tmpPath,
+		[]byte(strings.Replace(string(data), "SERVICE_NAME", fullServiceName, -1)),
+		0644,
+	); err != nil {
+		return fmt.Errorf("Could not write temporary Consul template to %s\n%s", tmpPath, err.Error())
 	}
 	return nil
 }

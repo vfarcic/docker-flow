@@ -4,6 +4,14 @@ Docker Flow
 * [Introduction](#introduction)
 * [Examples](#examples)
 * [Usage](#usage)
+
+  * [Setting it up](#setting-it-up)
+  * [Reconfiguring proxy after deployment](#reconfiguring-proxy-after-deployment)
+  * [Deploying a new release without downtime](#deploying-a-new-release-without-downtime)
+  * [Scaling the service](#scaling-the-service)
+  * [Testing deployments to production](#testing-deployments-to-production)
+  * [Using custom Consul templates](#using-custom-consul-templates)
+
 * [Feedback and Contribution](#feedback-and-contribution)
 
 Introduction
@@ -26,9 +34,12 @@ The latest release can be found [here](https://github.com/vfarcic/docker-flow/re
 Examples
 --------
 
-The examples that follow will use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way.
+The examples that follow assume that you have Docker Machine and Docker Compose installed. The easiest way to get them is through [Docker Toolbox](https://www.docker.com/products/docker-toolbox).
 
-Please note that the examples presented below have been tested on OS X and Linux. In case you are a Windows user, you might want to explore the OS agnostic examples provided in the **[Docker Flow: Walkthrough](https://technologyconversations.com/2016/04/18/docker-flow/)** article.
+> If you are a Windows user, please run all the examples from *Git Bash* (installed through *Docker Toolbox*).
+
+We'll use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way.
+
 
 ### Setting it up
 
@@ -86,8 +97,8 @@ docker ps -a
 The output of the `ps` command is as follows.
 
 ```
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                                                                         NAMES
-6a33159ba9e3        progrium/consul     "/bin/start -server -"   5 minutes ago       Up 5 minutes        53/udp, 53/tcp, 8302/tcp, 0.0.0.0:8300-8301->8300-8301/tcp, 8400/tcp, 8301-8302/udp, 0.0.0.0:8500->8500/tcp   consul
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+ccb5e812b7e1        consul              "docker-entrypoint.sh"   23 minutes ago      Up 23 minutes                           consul
 ```
 
 With the cluster and the proxy server set up, we are ready to give **Docker Flow** a spin and see it in action.
@@ -99,6 +110,10 @@ With the cluster and the proxy server set up, we are ready to give **Docker Flow
 Let's start by defining proxy and Consul data through environment variables.
 
 ```bash
+export PROXY_IP=$(docker-machine ip proxy)
+
+export CONSUL_IP=$(docker-machine ip proxy)
+
 export FLOW_PROXY_HOST=$(docker-machine ip proxy)
 
 export CONSUL_IP=$(docker-machine ip proxy)
@@ -122,7 +137,7 @@ eval "$(docker-machine env --swarm swarm-master)"
 ./docker-flow \
     --blue-green \
     --target=app \
-    --service-path="/api/v1/books" \
+    --service-path="/demo" \
     --side-target=db \
     --flow=deploy --flow=proxy
 ```
@@ -138,9 +153,9 @@ docker ps --format "table {{.Names}}\t{{.Image}}"
 The output of the `ps` command is as follows.
 
 ```
-NAMES                                IMAGE
-swarm-node-2/dockerflow_app-blue_1   vfarcic/books-ms
-swarm-node-1/books-ms-db             mongo
+NAMES                                 IMAGE
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo
+swarm-node-1/dockerflow_db_1          mongo
 ...
 ```
 
@@ -159,7 +174,7 @@ The output of the `ps` command is as follows.
 ```
 NAMES               IMAGE
 docker-flow-proxy   vfarcic/docker-flow-proxy
-consul              progrium/consul
+consul              consul
 ```
 
 *Docker Flow* detected that there was no *proxy* on that node and run it for us. The *docker-flow-proxy* container contains *HAProxy* together with custom code that reconfigures it every time a new service is run. For more information about the *Docker Flow: Proxy*, please read the [project README](https://github.com/vfarcic/docker-flow-proxy).
@@ -167,18 +182,18 @@ consul              progrium/consul
 Since we instructed Swarm to run our service somewhere inside the cluster, we could not know in advance which server will be chosen. In this particular case, our service ended up running inside the *swarm-node-2*. Moreover, to avoid potential conflicts and allow easier scaling, we did not specify which port the service should expose. In other words, both the IP and the port of the service were not defined in advance. Among other things, *Docker Flow* solves this by running *Docker Flow: Proxy* and instructing it to reconfigure itself with the information gathered after the container is run. We can confirm that the proxy reconfiguration was indeed successful by sending an HTTP request to the newly deployed service.
 
 ```bash
-curl -I $PROXY_IP/api/v1/books
+curl -i $PROXY_IP/demo/hello
 ```
 
 The output of the `curl` command is as follows.
 
 ```
 HTTP/1.1 200 OK
-Server: spray-can/1.3.1
-Date: Thu, 07 Apr 2016 19:23:34 GMT
-Access-Control-Allow-Origin: *
-Content-Type: application/json; charset=UTF-8
-Content-Length: 2
+Date: Sun, 22 May 2016 17:23:41 GMT
+Content-Length: 14
+Content-Type: text/plain; charset=utf-8
+
+hello, world!
 ```
 
 Even though our service is running in one of the servers chosen by Swarm and is exposing a random port, the proxy was reconfigured and we can access it through a fixed IP and without a port (to be more precise through standard HTTP port 80 or HTTPS port 443).
@@ -195,7 +210,7 @@ side_targets:
   - db
 blue_green: true
 service_path:
-  - /api/v1/books
+  - /demo
 ```
 
 Let's run the new release.
@@ -217,9 +232,9 @@ The output of the `ps` command is as follows.
 
 ```bash
 NAMES                                 IMAGE                    STATUS
-swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 52 seconds
-swarm-node-2/dockerflow_app-blue_1    vfarcic/books-ms         Exited (137) 54 seconds ago
-swarm-node-1/books-ms-db              mongo                    Up About an hour
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo          Up 7 seconds
+swarm-master/dockerflow_app-blue_1    vfarcic/go-demo          Exited (2) 6 seconds ago
+swarm-node-1/dockerflow_db_1          mongo                    Up 12 minutes
 ...
 ```
 
@@ -228,18 +243,18 @@ From the output, we can observe that the new release (*green*) is running and th
 Let's confirm that the proxy was reconfigured as well.
 
 ```bash
-curl -I $PROXY_IP/api/v1/books
+curl -i $PROXY_IP/demo/hello
 ```
 
 The output of the `curl` command is as follows.
 
 ```
 HTTP/1.1 200 OK
-Server: spray-can/1.3.1
-Date: Thu, 07 Apr 2016 19:45:07 GMT
-Access-Control-Allow-Origin: *
-Content-Type: application/json; charset=UTF-8
-Content-Length: 2
+Date: Sun, 22 May 2016 17:25:19 GMT
+Content-Length: 14
+Content-Type: text/plain; charset=utf-8
+
+hello, world!
 ```
 
 The new release was deployed without any downtime and the proxy has been reconfigured to redirect all requests to it.
@@ -266,9 +281,9 @@ The output of the `ps` command is as follows.
 
 ```
 NAMES                                 IMAGE                    STATUS
-swarm-node-2/dockerflow_app-green_2   vfarcic/books-ms         Up About a minute
-swarm-master/dockerflow_app-green_3   vfarcic/books-ms         Up About a minute
-swarm-node-1/dockerflow_app-green_1   vfarcic/books-ms         Up 33 minutes
+swarm-node-2/dockerflow_app-green_3   vfarcic/go-demo          Up 8 seconds
+swarm-node-1/dockerflow_app-green_2   vfarcic/go-demo          Up 8 seconds
+swarm-node-2/dockerflow_app-green_1   vfarcic/go-demo          Up About a minute
 ```
 
 The number of instances was increased by two. While only one instance was running before, now we have three.
@@ -306,10 +321,11 @@ The output of the `ps` command is as follows.
 
 ```
 NAMES                                 STATUS              PORTS
-swarm-node-2/dockerflow_app-blue_1    Up 5 minutes        192.168.99.103:32770->8080/tcp
-swarm-node-1/dockerflow_app-blue_2    Up 5 minutes        192.168.99.102:32773->8080/tcp
-swarm-node-1/dockerflow_app-green_1   Up About an hour    192.168.99.102:32768->8080/tcp
-swarm-node-2/dockerflow_app-green_2   Up About an hour    192.168.99.103:32763->8080/tcp
+swarm-master/dockerflow_app-blue_2    Up 8 seconds        192.168.99.101:32769->8080/tcp
+swarm-node-2/dockerflow_app-blue_1    Up 9 seconds        192.168.99.103:32771->8080/tcp
+swarm-node-1/dockerflow_app-green_2   Up About a minute   192.168.99.102:32768->8080/tcp
+swarm-node-2/dockerflow_app-green_1   Up 2 minutes        192.168.99.103:32769->8080/tcp
+...
 ```
 
 At this moment, the new release (*blue*) is running in parallel with the old release (*green*). Since we did not specify the *--flow=proxy* argument, the proxy is left unchanged and still redirects to all the instances of the old release. What this means is that the users of our service still see the old release while we have the opportunity to test it. We can run integration, functional, or any other type of tests and validate that the new release indeed meets the expectations we have. While testing in production does not exclude testing in other environments (e.g. staging), this approach gives us greater level of trust by being able to validate the software under exactly the same circumstances our users will use it while, at the same time, not affecting them during the process (they are still oblivious of the existence of the new release).
@@ -324,6 +340,30 @@ After the tests are run, we have two paths we can take. If one of the tests fail
     --flow=stop-old
 ```
 
+### Using custom Consul templates
+
+While, in most cases, the automatic proxy configuration is all you need, you might have a particular use case that would benefit from custom Consul templates. In such a case, you'd prepare your own templates and let *Docker Flow* use them throughout the process.
+
+For more information regarding templating format, please visit the [Consul Template](https://github.com/hashicorp/consul-template) project.
+
+The following example illustrates the usage of custom Consul templates.
+
+```bash
+eval "$(docker-machine env --swarm swarm-master)"
+
+./docker-flow \
+    --consul-template-path test_configs/tmpl/go-demo-app.tmpl \
+    --flow=deploy --flow=proxy --flow=stop-old
+```
+
+*Docker Flow* processed the template located in the `test_configs/tmpl/go-demo-app.tmpl` file and sent the result to the proxy. The rest of the process was the same as explained earlier.
+
+Let's confirm whether the proxy was indeed configured correctly.
+
+```bash
+curl -i $PROXY_IP/demo/hello
+```
+
 That concludes the quick tour through some of the features *Docker Flow* provides. Please explore the [Usage](#usage) section for more details.
 
 Usage
@@ -335,44 +375,47 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 
 |Command argument                     |Description|
 |-------------------------------------|-----------|
-|-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
+|-b, --blue-green                     |Perform blue-green deployment. (**bool**)|
 |    --cert-path=                     |Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead.|
 |-f, --compose-path=docker-compose.yml|Path to the Docker Compose configuration file. (default: docker-compose.yml)|
-|-b, --blue-green                     |Perform blue-green deployment. (**bool**)|
-|-t, --target=                        |Docker Compose target. (default: app)|
-|-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
-|-S, --pull-side-targets              |Pull side or auxiliary targets. (**bool**)|
-|-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
 |-c, --consul-address=                |The address of the Consul server.|
-|-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
+|    --consul-template-path=          |The path to the Consul Template. If specified, proxy template will be loaded from the specified file.|
 |-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(default: [deploy]) (**multi**)|
-|    --proxy-host=                    |The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used.|
-|    --proxy-docker-host=             |Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used.|
-|    --proxy-docker-cert-path=        |Docker certification path for the proxy host.|
-|    --proxy-reconf-port=             |The port used by the proxy to reconfigure its configuration|
-|    --service-path=                  |Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used. (**multi**)|
 |-h, --help                           |Show this help message|
+|-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
+|-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
+|    --proxy-docker-cert-path=        |Docker certification path for the proxy host.|
+|    --proxy-docker-host=             |Docker daemon socket of the proxy host. This argument is required only if the proxy flow step is used.|
+|    --proxy-host=                    |The host of the proxy. Visitors should request services from this domain. Docker Flow uses it to request reconfiguration when a new service is deployed or an existing one is scaled. This argument is required only if the proxy flow step is used.|
+|    --proxy-reconf-port=             |The port used by the proxy to reconfigure its configuration|
+|-S, --pull-side-targets              |Pull side or auxiliary targets. (**bool**)|
+|-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
+|    --service-path=                  |Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used. (**multi**)|
+|-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
+|-t, --target=                        |Docker Compose target. (default: app)|
 
 ### Mappings from command line arguments to YML and environment variables
 
 |Command argument                     |YML                   |Environment variable       |
 |-------------------------------------|----------------------|---------------------------|
-|-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
+|-b, --blue-green                     |blue_green            |FLOW_BLUE_GREEN            |
 |    --cert-path=                     |cert_path             |FLOW_CERT_PATH             |
 |-f, --compose-path=docker-compose.yml|compose_path          |FLOW_COMPOSE_PATH          |
-|-b, --blue-green                     |blue_green            |FLOW_BLUE_GREEN            |
-|-t, --target=                        |target                |FLOW_TARGET                |
-|-T, --side-target=                   |side_targets          |FLOW_SIDE_TARGETS          |
-|-S, --pull-side-targets              |pull_side_targets     |FLOW_PULL_SIDE_TARGETS     |
-|-p, --project=                       |project               |FLOW_PROJECT               |
 |-c, --consul-address=                |consul_address        |FLOW_CONSUL_ADDRESS        |
-|-s, --scale=                         |scale                 |SCALE                      |
+|    --consul-template-path=          |consul_template_path  |FLOW_CONSUL_TEMPLATE_PATH  |
 |-F, --flow=                          |flow                  |FLOW                       |
-|    --proxy-host=                    |proxy_host            |FLOW_PROXY_HOST            |
-|    --proxy-docker-host=             |proxy_docker_host|FLOW_PROXY_DOCKER_HOST          |
+|-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
+|-p, --project=                       |project               |FLOW_PROJECT               |
 |    --proxy-docker-cert-path=        |proxy_docker_cert_path|FLOW_PROXY_DOCKER_CERT_PATH|
+|    --proxy-docker-host=             |proxy_docker_host|FLOW_PROXY_DOCKER_HOST          |
+|    --proxy-host=                    |proxy_host            |FLOW_PROXY_HOST            |
 |    --proxy-reconf-port=             |proxy_reconf_port     |FLOW_PROXY_RECONF_PORT     |
+|-S, --pull-side-targets              |pull_side_targets     |FLOW_PULL_SIDE_TARGETS     |
+|-s, --scale=                         |scale                 |SCALE                      |
 |    --service-path=                  |service_path          |FLOW_SERVICE_PATH          |
+|-T, --side-target=                   |side_targets          |FLOW_SIDE_TARGETS          |
+|-t, --target=                        |target                |FLOW_TARGET                |
+
 
 Arguments can be strings, boolean, or multiple values. Command line arguments of boolean type do not have any value (i.e. *--blue-green*). Environment variables and YML arguments of boolean type should use *true* as value (i.e. *FLOW_BLUE_GREEN=true* and *blue_green: true*). When allowed, multiple values can be specified by repeating the command line argument (e.g. *--flow=deploy --flow=stop-old*). When specified through environment variables, multiple values should be separated with comma (e.g. *FLOW=deploy,stop-old*). YML accepts multiple values through the standard format.
 

@@ -502,11 +502,14 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenDeploy() {
 	mockObj.AssertCalled(
 		s.T(),
 		"Reconfigure",
+		s.opts.ProxyDockerHost,
+		s.opts.ProxyDockerCertPath,
 		s.opts.ProxyHost,
 		s.opts.ProxyReconfPort,
 		s.opts.ServiceName,
 		s.opts.NextColor,
 		s.opts.ServicePath,
+		"",
 	)
 }
 
@@ -519,11 +522,14 @@ func (s FlowTestSuite) Test_Proxy_InvokesReconfigure_WhenScale() {
 	mockObj.AssertCalled(
 		s.T(),
 		"Reconfigure",
+		s.opts.ProxyDockerHost,
+		s.opts.ProxyDockerCertPath,
 		s.opts.ProxyHost,
 		s.opts.ProxyReconfPort,
 		s.opts.ServiceName,
 		s.opts.CurrentColor,
 		s.opts.ServicePath,
+		"",
 	)
 }
 
@@ -532,6 +538,9 @@ func (s FlowTestSuite) Test_Proxy_ReturnsError_WhenReconfigureFails() {
 	mockObj := getProxyMock("Reconfigure")
 	mockObj.On(
 		"Reconfigure",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

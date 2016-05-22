@@ -9,51 +9,41 @@ package main
 // With Docker Machine
 // $ docker-machine create -d virtualbox docker-flow-test
 // $ eval "$(docker-machine env docker-flow-test)"
-// $ go build && go test --cover --tags integration
+// $ go build && go test --cover --tags integration | tee tests.log
 // $ docker-machine rm -f docker-flow-test
-// TODO: Change books-ms for a "lighter" service
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/suite"
-	"testing"
+	"log"
+	"net/http"
+	"os"
 	"os/exec"
 	"strings"
-	"log"
-	"bytes"
-	"os"
+	"testing"
 	"time"
-	"net/http"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ConsulIp			string
-	ProxyHost			string
-	ProxyDockerHost 	string
+	ConsulIp            string
+	ProxyIp             string
+	ProxyHost           string
+	ProxyDockerHost     string
 	ProxyDockerCertPath string
-	ServicePath			string
+	ServicePath         string
+	ServiceName         string
 }
 
 func (s *IntegrationTestSuite) SetupTest() {
-	_, ids := s.runCmdWithoutStdOut(true, "docker", "ps", "-a", "--filter", "name=booksms", "--format", "{{.ID}}")
-	for _, id := range strings.Split(ids, "\n") {
-		s.runCmdWithStdOut(false, "docker", "rm", "-f", string(id))
-	}
-	s.runCmdWithStdOut(false, "docker", "rm", "-f", "consul", "docker-flow-proxy", "registrator")
-	s.runCmdWithStdOut(
-		true,
-		"docker", "run", "-d", "--name", "consul",
-		"-p", "8500:8500",
-		"-h", "consul",
-		"progrium/consul", "-server", "-bootstrap",
-	)
+	s.removeAll()
 	time.Sleep(time.Second)
 }
 
 // Integration
 
-func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
+func (s IntegrationTestSuite) XTest_BlueGreenDeployment() {
 	origConsulAddress := os.Getenv("FLOW_CONSUL_ADDRESS")
 	defer func() {
 		os.Setenv("FLOW_CONSUL_ADDRESS", origConsulAddress)
@@ -71,16 +61,16 @@ func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
 		"--blue-green",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"books-ms-db", "Up" },
+		{"godemo_app-blue_1", "Up"},
+		{"godemo_db", "Up"},
 	})
 
 	log.Println("Second deployment (green)")
 	os.Setenv("FLOW_CONSUL_ADDRESS", fmt.Sprintf("http://%s:8500", s.ConsulIp))
 	s.runCmdWithStdOut(true, "./docker-flow", "--flow", "deploy")
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-green_1", "Up" },
+		{"godemo_app-blue_1", "Up"},
+		{"godemo_app-green_1", "Up"},
 	})
 
 	log.Println("Third deployment (blue) with stop old release (green)")
@@ -89,12 +79,12 @@ func (s IntegrationTestSuite) Test_BlueGreenDeployment() {
 		"./docker-flow",
 		"--flow", "deploy", "--flow", "stop-old")
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-green_1", "Exited" },
+		{"godemo_app-blue_1", "Up"},
+		{"godemo_app-green_1", "Exited"},
 	})
 }
 
-func (s IntegrationTestSuite) Test_Scaling() {
+func (s IntegrationTestSuite) XTest_Scaling() {
 	log.Println(">> Integration tests: scaling")
 
 	log.Println("First deployment (blue, 2 instances)")
@@ -106,9 +96,9 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "2",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-blue_1", "Up" },
-		{"booksms_app-blue_2", "Up" },
-		{"books-ms-db", "Up" },
+		{"godemo_app-blue_1", "Up"},
+		{"godemo_app-blue_2", "Up"},
+		{"godemo_db", "Up"},
 	})
 
 	log.Println("Second deployment (green, 4 (+2) instances)")
@@ -120,10 +110,10 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "+2",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-green_1", "Up" },
-		{"booksms_app-green_2", "Up" },
-		{"booksms_app-green_3", "Up" },
-		{"booksms_app-green_4", "Up" },
+		{"godemo_app-green_1", "Up"},
+		{"godemo_app-green_2", "Up"},
+		{"godemo_app-green_3", "Up"},
+		{"godemo_app-green_4", "Up"},
 	})
 
 	log.Println("Scaling (green, 3 (-1) instances)")
@@ -135,14 +125,14 @@ func (s IntegrationTestSuite) Test_Scaling() {
 		"--scale", "\"-1\"",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"booksms_app-green_1", "Up" },
-		{"booksms_app-green_2", "Up" },
-		{"booksms_app-green_3", "Up" },
-		{"booksms_app-green_4", "N/A" },
+		{"godemo_app-green_1", "Up"},
+		{"godemo_app-green_2", "Up"},
+		{"godemo_app-green_3", "Up"},
+		{"godemo_app-green_4", "N/A"},
 	})
 }
 
-func (s IntegrationTestSuite) Test_Proxy() {
+func (s IntegrationTestSuite) XTest_Proxy() {
 	log.Println(">> Integration tests: proxy")
 
 	s.runCmdWithStdOut(
@@ -165,16 +155,17 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--flow", "deploy", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Up" },
+		{"docker-flow-proxy", "Up"},
 	})
-	resp, err := http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
+	url := fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath)
+	resp, err := http.Get(url)
 	s.NoError(err)
-	s.Equal(200, resp.StatusCode)
+	s.Equal(200, resp.StatusCode, "Failed to send the request %s", url)
 
 	log.Println("Runs proxy when stopped and reconfigures it when scale")
 	s.runCmdWithStdOut(false, "docker", "stop", "docker-flow-proxy")
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Exited" },
+		{"docker-flow-proxy", "Exited"},
 	})
 	s.runCmdWithStdOut(
 		true,
@@ -188,12 +179,12 @@ func (s IntegrationTestSuite) Test_Proxy() {
 		"--flow", "scale", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{
-		{"docker-flow-proxy", "Up" },
+		{"docker-flow-proxy", "Up"},
 	})
 	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
 	s.NoError(err)
 	s.Equal(200, resp.StatusCode)
-	s.runCmdWithStdOut(true, "docker", "rm", "-f", "booksms_app-blue_1")
+	s.runCmdWithStdOut(true, "docker", "rm", "-f", "godemo_app-blue_1")
 	resp, err = http.Get(fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath))
 	s.NoError(err)
 	s.Equal(200, resp.StatusCode)
@@ -220,11 +211,43 @@ func (s IntegrationTestSuite) Test_Proxy() {
 	s.Equal(200, resp.StatusCode)
 }
 
-// Util
-type ContainerStatus struct {
-	Name	string
-	Status 	string
+func (s IntegrationTestSuite) Test_Proxy_Templates() {
+	log.Println(">> Integration tests: proxy with templates")
+
+	s.runCmdWithStdOut(
+		true,
+		"docker", "run", "-d", "--name", "registrator",
+		"-v", "/var/run/docker.sock:/tmp/docker.sock",
+		"gliderlabs/registrator",
+		"-ip", s.ConsulIp, fmt.Sprintf("consul://%s:8500", s.ConsulIp),
+	)
+	s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--proxy-host", s.ProxyHost,
+		"--proxy-docker-host", s.ProxyDockerHost,
+		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
+		"--service-path", "INCORRECT",
+		"--consul-template-path", "test_configs/tmpl/go-demo-app.tmpl",
+		"--flow", "deploy", "--flow", "proxy",
+	)
+	s.verifyContainer([]ContainerStatus{
+		{"docker-flow-proxy", "Up"},
+	})
+	url := fmt.Sprintf("http://%s%s", s.ConsulIp, s.ServicePath)
+	resp, err := http.Get(url)
+	s.NoError(err)
+	s.Equal(200, resp.StatusCode, "Failed to send the request %s", url)
 }
+
+// Util
+
+type ContainerStatus struct {
+	Name   string
+	Status string
+}
+
 func (s IntegrationTestSuite) verifyContainer(csList []ContainerStatus) {
 	s.runCmdWithStdOut(false, "docker", "ps", "-a")
 	for _, cs := range csList {
@@ -279,6 +302,19 @@ func (s IntegrationTestSuite) runCmdWithStdOut(failOnError bool, command string,
 	return s.runCmd(failOnError, true, command, args...)
 }
 
+func (s *IntegrationTestSuite) removeAll() {
+	_, ids := s.runCmdWithoutStdOut(true, "docker", "ps", "-a", "--filter", "name=dockerflow", "--format", "{{.ID}}")
+	for _, id := range strings.Split(ids, "\n") {
+		s.runCmdWithStdOut(false, "docker", "rm", "-f", string(id))
+	}
+	s.runCmdWithStdOut(false, "docker", "rm", "-f", "consul", "docker-flow-proxy", "registrator")
+	s.runCmdWithStdOut(false, "docker-compose", "-f", "docker-compose-setup.yml", "-p", "tests-setup", "down")
+	s.runCmdWithStdOut(
+		true,
+		"docker-compose", "-f", "docker-compose-setup.yml", "-p", "tests-setup", "up", "-d", "consul",
+	)
+}
+
 // Suite
 
 func TestIntegrationTestSuite(t *testing.T) {
@@ -289,11 +325,13 @@ func TestIntegrationTestSuite(t *testing.T) {
 		ip = strings.Trim(msg, "\n")
 	}
 	s.ConsulIp = ip
+	s.ProxyIp = ip
 	s.ProxyHost = ip
 	s.ProxyDockerHost = os.Getenv("DOCKER_HOST")
 	s.ProxyDockerCertPath = os.Getenv("DOCKER_CERT_PATH")
-	s.ServicePath = "/api/v1/books"
+	s.ServicePath = "/demo/hello"
+	s.ServiceName = "go-demo"
 	os.Setenv("FLOW_CONSUL_IP", s.ConsulIp)
-	os.Setenv("FLOW_PROJECT", "booksms")
+	os.Setenv("FLOW_PROJECT", s.ServiceName)
 	suite.Run(t, s)
 }
