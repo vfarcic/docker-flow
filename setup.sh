@@ -4,12 +4,14 @@ docker-machine create -d virtualbox proxy
 
 export CONSUL_IP=$(docker-machine ip proxy)
 
+export HOST_IP=$(docker-machine ip proxy)
+
 eval "$(docker-machine env proxy)"
 
 docker-compose \
     -p setup \
     -f docker-compose-setup.yml \
-    up -d consul
+    up -d consul-server
 
 docker-machine create -d virtualbox \
     --swarm --swarm-master \

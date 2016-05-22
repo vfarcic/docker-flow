@@ -26,9 +26,12 @@ The latest release can be found [here](https://github.com/vfarcic/docker-flow/re
 Examples
 --------
 
-The examples that follow will use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way.
+The examples that follow assume that you have Docker Machine and Docker Compose installed. The easiest way to get them is through [Docker Toolbox](https://www.docker.com/products/docker-toolbox).
 
-Please note that the examples presented below have been tested on OS X and Linux. In case you are a Windows user, you might want to explore the OS agnostic examples provided in the **[Docker Flow: Walkthrough](https://technologyconversations.com/2016/04/18/docker-flow/)** article.
+> If you are a Windows user, please run all the examples from *Git Bash* (installed through *Docker Toolbox*).
+
+We'll use [Docker Machine](https://www.docker.com/products/docker-machine) to simulate a [Docker Swarm](https://www.docker.com/products/docker-swarm) cluster. That does not mean that the usage of **Docker Flow** is limited to either of those two. You can use it with a single [Docker Engine](https://www.docker.com/products/docker-engine) or a Swarm cluster set up in any other way.
+
 
 ### Setting it up
 
@@ -86,8 +89,8 @@ docker ps -a
 The output of the `ps` command is as follows.
 
 ```
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                                                                         NAMES
-6a33159ba9e3        progrium/consul     "/bin/start -server -"   5 minutes ago       Up 5 minutes        53/udp, 53/tcp, 8302/tcp, 0.0.0.0:8300-8301->8300-8301/tcp, 8400/tcp, 8301-8302/udp, 0.0.0.0:8500->8500/tcp   consul
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+ccb5e812b7e1        consul              "docker-entrypoint.sh"   23 minutes ago      Up 23 minutes                           consul
 ```
 
 With the cluster and the proxy server set up, we are ready to give **Docker Flow** a spin and see it in action.
@@ -100,6 +103,8 @@ Let's start by defining proxy and Consul data through environment variables.
 
 ```bash
 export FLOW_PROXY_HOST=$(docker-machine ip proxy)
+
+export CONSUL_IP=$(docker-machine ip proxy)
 
 export FLOW_CONSUL_ADDRESS=http://$CONSUL_IP:8500
 
