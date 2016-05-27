@@ -229,7 +229,8 @@ func (s IntegrationTestSuite) Test_Proxy_Templates() {
 		"--proxy-docker-host", s.ProxyDockerHost,
 		"--proxy-docker-cert-path", s.ProxyDockerCertPath,
 		"--service-path", "INCORRECT",
-		"--consul-template-path", "test_configs/tmpl/go-demo-app.tmpl",
+		"--consul-template-fe-path", "test_configs/tmpl/go-demo-app-fe.tmpl",
+		"--consul-template-be-path", "test_configs/tmpl/go-demo-app-be.tmpl",
 		"--flow", "deploy", "--flow", "proxy",
 	)
 	s.verifyContainer([]ContainerStatus{

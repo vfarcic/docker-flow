@@ -109,7 +109,8 @@ func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 		opts.ServiceName,
 		color,
 		opts.ServicePath,
-		opts.ConsulTemplatePath,
+		opts.ConsulTemplateFePath,
+		opts.ConsulTemplateBePath,
 	); err != nil {
 		return err
 	}

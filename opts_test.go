@@ -221,8 +221,8 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 	s.Equal(expected, s.opts.Flow)
 }
 
-func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFileDoesNotExist() {
-	s.opts.ConsulTemplatePath = "/this/path/does/not/exist"
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFeFileDoesNotExist() {
+	s.opts.ConsulTemplateFePath = "/this/path/does/not/exist"
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
@@ -232,16 +232,39 @@ func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFileDoesN
 	s.Error(actual)
 }
 
-func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplate_WhenConsulTemplateFileIsSpecified() {
+func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateBeFileDoesNotExist() {
+	s.opts.ConsulTemplateBePath = "/this/path/does/not/exist"
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(""), fmt.Errorf("This is an error")
+	}
+
+	actual := ProcessOpts(&s.opts)
+
+	s.Error(actual)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplateFe_WhenConsulTemplateFileIsSpecified() {
 	expected := "This is content of a Consul Template"
-	s.opts.ConsulTemplatePath = "/this/path/does/not/exist"
+	s.opts.ConsulTemplateFePath = "/this/path/does/not/exist"
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(expected), nil
 	}
 
 	ProcessOpts(&s.opts)
 
-	s.Equal(expected, s.opts.ConsulTemplate)
+	s.Equal(expected, s.opts.ConsulTemplateFe)
+}
+
+func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplateBe_WhenConsulTemplateFileIsSpecified() {
+	expected := "This is content of a Consul Template"
+	s.opts.ConsulTemplateBePath = "/this/path/does/not/exist"
+	readFile = func(fileName string) ([]byte, error) {
+		return []byte(expected), nil
+	}
+
+	ProcessOpts(&s.opts)
+
+	s.Equal(expected, s.opts.ConsulTemplateBe)
 }
 
 // ParseEnvVars
@@ -263,7 +286,8 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		{"myProxyDockerHost", "FLOW_PROXY_DOCKER_HOST", &s.opts.ProxyDockerHost},
 		{"myProxyCertPath", "FLOW_PROXY_DOCKER_CERT_PATH", &s.opts.ProxyDockerCertPath},
 		{"4357", "FLOW_PROXY_RECONF_PORT", &s.opts.ProxyReconfPort},
-		{"myConsulTemplatePath", "FLOW_CONSUL_TEMPLATE_PATH", &s.opts.ConsulTemplatePath},
+		{"myConsulTemplateFePath", "FLOW_CONSUL_TEMPLATE_FE_PATH", &s.opts.ConsulTemplateFePath},
+		{"myConsulTemplateBePath", "FLOW_CONSUL_TEMPLATE_BE_PATH", &s.opts.ConsulTemplateBePath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -355,7 +379,8 @@ func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
 		{"proxyHostFromArgs", "proxy-docker-host", &s.opts.ProxyDockerHost},
 		{"proxyCertPathFromArgs", "proxy-docker-cert-path", &s.opts.ProxyDockerCertPath},
 		{"1234", "proxy-reconf-port", &s.opts.ProxyReconfPort},
-		{"consulTemplatePathFromArgs", "consul-template-path", &s.opts.ConsulTemplatePath},
+		{"consulTemplateFePathFromArgs", "consul-template-fe-path", &s.opts.ConsulTemplateFePath},
+		{"consulTemplateBePathFromArgs", "consul-template-be-path", &s.opts.ConsulTemplateBePath},
 	}
 
 	for _, d := range data {
@@ -536,7 +561,8 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	proxyDockerHost := "proxyDomainFromYml"
 	proxyDockerCertPath := "proxyCertPathFromYml"
 	proxyReconfPort := "1245"
-	consulTemplatePath := "/path/to/consul/template"
+	consulTemplateFePath := "/path/to/consul/fe/template"
+	consulTemplateBePath := "/path/to/consul/be/template"
 	yml := fmt.Sprintf(`
 host: %s
 cert_path: %s
@@ -561,11 +587,12 @@ flow:
 service_path:
   - %s
   - %s
-consul_template_path: %s`,
+consul_template_fe_path: %s
+consul_template_be_path: %s`,
 		host, certPath, composePath, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
 		proxyDockerCertPath, proxyReconfPort, flow1, flow2, path1,
-		path2, consulTemplatePath,
+		path2, consulTemplateFePath, consulTemplateBePath,
 	)
 	readFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
@@ -588,7 +615,8 @@ consul_template_path: %s`,
 	s.Equal(proxyReconfPort, s.opts.ProxyReconfPort)
 	s.Equal([]string{flow1, flow2}, s.opts.Flow)
 	s.Equal([]string{path1, path2}, s.opts.ServicePath)
-	s.Equal(consulTemplatePath, s.opts.ConsulTemplatePath)
+	s.Equal(consulTemplateFePath, s.opts.ConsulTemplateFePath)
+	s.Equal(consulTemplateBePath, s.opts.ConsulTemplateBePath)
 }
 
 // GetOpts

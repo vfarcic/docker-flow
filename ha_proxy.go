@@ -60,10 +60,10 @@ func (m HaProxy) Provision(dockerHost, reconfPort, certPath, scAddress string) e
 func (m HaProxy) Reconfigure(
 	dockerHost, dockerCertPath, host, reconfPort, serviceName, serviceColor string,
 	servicePath []string,
-	consulTemplatePath string,
+	consulTemplateFePath string, consulTemplateBePath string,
 ) error {
-	if len(consulTemplatePath) > 0 {
-		if err := m.sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName, serviceColor); err != nil {
+	if len(consulTemplateFePath) > 0 {
+		if err := m.sendConsulTemplatesToTheProxy(dockerHost, dockerCertPath, consulTemplateFePath, consulTemplateBePath, serviceName, serviceColor); err != nil {
 			return err
 		}
 	} else if len(servicePath) == 0 {
@@ -78,7 +78,7 @@ func (m HaProxy) Reconfigure(
 	if len(reconfPort) == 0 && !strings.Contains(host, ":") {
 		return fmt.Errorf("Reconfigure port is mandatory.")
 	}
-	if err := m.sendReconfigureRequest(host, reconfPort, serviceName, serviceColor, servicePath, consulTemplatePath); err != nil {
+	if err := m.sendReconfigureRequest(host, reconfPort, serviceName, serviceColor, servicePath, consulTemplateFePath, consulTemplateBePath); err != nil {
 		return err
 	}
 	return nil
@@ -87,7 +87,7 @@ func (m HaProxy) Reconfigure(
 func (m HaProxy) sendReconfigureRequest(
 	host, reconfPort, serviceName, serviceColor string,
 	servicePath []string,
-	consulTemplatePath string,
+	consulTemplateFePath, consulTemplateBePath string,
 ) error {
 	address := host
 	if len(reconfPort) > 0 {
@@ -101,8 +101,8 @@ func (m HaProxy) sendReconfigureRequest(
 		address,
 		serviceName,
 	)
-	if len(consulTemplatePath) > 0 {
-		proxyUrl = fmt.Sprintf("%s&consulTemplatePath=%s/%s.tmpl", proxyUrl, ConsulTemplatesDir, serviceName)
+	if len(consulTemplateFePath) > 0 {
+		proxyUrl = fmt.Sprintf("%s&consulTemplateFePath=%s/%s-fe.tmpl&consulTemplateBePath=%s/%s-be.tmpl", proxyUrl, ConsulTemplatesDir, serviceName, ConsulTemplatesDir, serviceName)
 	} else {
 		if len(serviceColor) > 0 {
 			proxyUrl = fmt.Sprintf("%s&serviceColor=%s", proxyUrl, serviceColor)
@@ -121,19 +121,29 @@ func (m HaProxy) sendReconfigureRequest(
 	return nil
 }
 
-func (m HaProxy) sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName, color string) error {
-	if err := m.createTempConsulTemplate(consulTemplatePath, serviceName, color); err != nil {
+func (m HaProxy) sendConsulTemplatesToTheProxy(dockerHost, dockerCertPath, consulTemplateFePath, consulTemplateBePath, serviceName, color string) error {
+	if err := m.sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplateFePath, serviceName, color, "fe"); err != nil {
 		return err
 	}
-	if err := m.copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName); err != nil {
+	if err := m.sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplateBePath, serviceName, color, "be"); err != nil {
 		return err
 	}
-	removeFile(fmt.Sprintf("%s.tmp", consulTemplatePath))
-
 	return nil
 }
 
-func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName string) error {
+func (m HaProxy) sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, serviceName, color, templateType string) error {
+	if err := m.createTempConsulTemplate(consulTemplatePath, serviceName, color); err != nil {
+		return err
+	}
+	file := fmt.Sprintf("%s-%s.tmpl", serviceName, templateType)
+	if err := m.copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, file); err != nil {
+		return err
+	}
+	removeFile(fmt.Sprintf("%s.tmp", consulTemplatePath))
+	return nil
+}
+
+func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, templateName string) error {
 	SetDockerHost(dockerHost, dockerCertPath)
 	args := []string{"exec", "-i", "docker-flow-proxy", "mkdir", "-p", ConsulTemplatesDir}
 	execCmd := exec.Command("docker", args...)
@@ -146,7 +156,7 @@ func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consul
 	args = []string{
 		"cp",
 		fmt.Sprintf("%s.tmp", consulTemplatePath),
-		fmt.Sprintf("docker-flow-proxy:%s/%s.tmpl", ConsulTemplatesDir, serviceName),
+		fmt.Sprintf("docker-flow-proxy:%s/%s", ConsulTemplatesDir, templateName),
 	}
 	cpCmd := exec.Command("docker", args...)
 	cpCmd.Stdout = os.Stdout
