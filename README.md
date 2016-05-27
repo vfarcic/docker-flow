@@ -352,7 +352,8 @@ The following example illustrates the usage of custom Consul templates.
 eval "$(docker-machine env --swarm swarm-master)"
 
 ./docker-flow \
-    --consul-template-path test_configs/tmpl/go-demo-app.tmpl \
+    --consul-template-fe-path test_configs/tmpl/go-demo-app-fe.tmpl \
+    --consul-template-be-path test_configs/tmpl/go-demo-app-be.tmpl \
     --flow=deploy --flow=proxy --flow=stop-old
 ```
 
@@ -397,7 +398,8 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |    --cert-path=                     |Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead.|
 |-f, --compose-path=docker-compose.yml|Path to the Docker Compose configuration file. (default: docker-compose.yml)|
 |-c, --consul-address=                |The address of the Consul server.|
-|    --consul-template-path=          |The path to the Consul Template. If specified, proxy template will be loaded from the specified file.|
+|    --consul-template-be-path=          |The path to the Consul Template representing snippet of the backend configuration. If specified, proxy template will be loaded from the specified file.|
+|    --consul-template-fe-path=          |The path to the Consul Template representing snippet of the frontend configuration. If specified, proxy template will be loaded from the specified file.|
 |-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(default: [deploy]) (**multi**)|
 |-h, --help                           |Show this help message|
 |-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
@@ -414,25 +416,26 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 
 ### Mappings from command line arguments to YML and environment variables
 
-|Command argument                     |YML                   |Environment variable       |
-|-------------------------------------|----------------------|---------------------------|
-|-b, --blue-green                     |blue_green            |FLOW_BLUE_GREEN            |
-|    --cert-path=                     |cert_path             |FLOW_CERT_PATH             |
-|-f, --compose-path=docker-compose.yml|compose_path          |FLOW_COMPOSE_PATH          |
-|-c, --consul-address=                |consul_address        |FLOW_CONSUL_ADDRESS        |
-|    --consul-template-path=          |consul_template_path  |FLOW_CONSUL_TEMPLATE_PATH  |
-|-F, --flow=                          |flow                  |FLOW                       |
-|-H, --host=                          |host                  |FLOW_HOST or DOCKER_HOST   |
-|-p, --project=                       |project               |FLOW_PROJECT               |
-|    --proxy-docker-cert-path=        |proxy_docker_cert_path|FLOW_PROXY_DOCKER_CERT_PATH|
-|    --proxy-docker-host=             |proxy_docker_host|FLOW_PROXY_DOCKER_HOST          |
-|    --proxy-host=                    |proxy_host            |FLOW_PROXY_HOST            |
-|    --proxy-reconf-port=             |proxy_reconf_port     |FLOW_PROXY_RECONF_PORT     |
-|-S, --pull-side-targets              |pull_side_targets     |FLOW_PULL_SIDE_TARGETS     |
-|-s, --scale=                         |scale                 |SCALE                      |
-|    --service-path=                  |service_path          |FLOW_SERVICE_PATH          |
-|-T, --side-target=                   |side_targets          |FLOW_SIDE_TARGETS          |
-|-t, --target=                        |target                |FLOW_TARGET                |
+|Command argument                     |YML                    |Environment variable        |
+|-------------------------------------|-----------------------|----------------------------|
+|-b, --blue-green                     |blue_green             |FLOW_BLUE_GREEN             |
+|    --cert-path=                     |cert_path              |FLOW_CERT_PATH              |
+|-f, --compose-path=docker-compose.yml|compose_path           |FLOW_COMPOSE_PATH           |
+|-c, --consul-address=                |consul_address         |FLOW_CONSUL_ADDRESS         |
+|    --consul-template-be-path=       |consul_template_be_path|FLOW_CONSUL_TEMPLATE_BE_PATH|
+|    --consul-template-fe-path=       |consul_template_fe_path|FLOW_CONSUL_TEMPLATE_FE_PATH|
+|-F, --flow=                          |flow                   |FLOW                        |
+|-H, --host=                          |host                   |FLOW_HOST or DOCKER_HOST    |
+|-p, --project=                       |project                |FLOW_PROJECT                |
+|    --proxy-docker-cert-path=        |proxy_docker_cert_path |FLOW_PROXY_DOCKER_CERT_PATH |
+|    --proxy-docker-host=             |proxy_docker_host      |FLOW_PROXY_DOCKER_HOST      |
+|    --proxy-host=                    |proxy_host             |FLOW_PROXY_HOST             |
+|    --proxy-reconf-port=             |proxy_reconf_port      |FLOW_PROXY_RECONF_PORT      |
+|-S, --pull-side-targets              |pull_side_targets      |FLOW_PULL_SIDE_TARGETS      |
+|-s, --scale=                         |scale                  |SCALE                       |
+|    --service-path=                  |service_path           |FLOW_SERVICE_PATH           |
+|-T, --side-target=                   |side_targets           |FLOW_SIDE_TARGETS           |
+|-t, --target=                        |target                 |FLOW_TARGET                 |
 
 
 Arguments can be strings, boolean, or multiple values. Command line arguments of boolean type do not have any value (i.e. *--blue-green*). Environment variables and YML arguments of boolean type should use *true* as value (i.e. *FLOW_BLUE_GREEN=true* and *blue_green: true*). When allowed, multiple values can be specified by repeating the command line argument (e.g. *--flow=deploy --flow=stop-old*). When specified through environment variables, multiple values should be separated with comma (e.g. *FLOW=deploy,stop-old*). YML accepts multiple values through the standard format.
