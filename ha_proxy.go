@@ -197,7 +197,7 @@ func (m HaProxy) run(reconfPort, scAddress string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := runHaProxyRunCmd(cmd); err != nil {
-		return fmt.Errorf("Docker run command failed\n%v\n%v\n", cmd, err)
+		return fmt.Errorf("Docker run command failed\n%s\n%s\n", strings.Join(cmd.Args, " "), err.Error())
 	}
 	return nil
 }
@@ -214,7 +214,7 @@ func (m HaProxy) ps() (int, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = os.Stderr
 	if err := runHaProxyPsCmd(cmd); err != nil {
-		return 0, fmt.Errorf("Docker ps command failed\n%v\n%v\n", cmd, err)
+		return 0, fmt.Errorf("Docker ps command failed\n%s\n%s\n", strings.Join(cmd.Args, " "), err.Error())
 	}
 	status := string(out.Bytes())
 	if strings.HasPrefix(status, "Exited") {
@@ -233,7 +233,7 @@ func (m HaProxy) start() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := runHaProxyStartCmd(cmd); err != nil {
-		return fmt.Errorf("Docker start command failed\n%v\n%v\n", cmd, err)
+		return fmt.Errorf("Docker start command failed\n%s\n%s\n", strings.Join(cmd.Args, " "), err.Error())
 	}
 	return nil
 }

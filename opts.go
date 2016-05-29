@@ -74,21 +74,21 @@ func ParseYml(opts *Opts) error {
 		return nil
 	}
 	if err = yaml.Unmarshal([]byte(data), opts); err != nil {
-		return fmt.Errorf("Could not parse the Docker Flow file %s\n%v", dockerFlowPath, err)
+		return fmt.Errorf("Could not parse the Docker Flow file %s\n%s", dockerFlowPath, err.Error())
 	}
 	return nil
 }
 
 func ParseArgs(opts *Opts) error {
 	if _, err := flags.ParseArgs(opts, os.Args[1:]); err != nil {
-		return fmt.Errorf("Could not parse command line arguments\n%v", err)
+		return fmt.Errorf("Could not parse command line arguments\n%s", err.Error())
 	}
 	return nil
 }
 
 func ParseEnvVars(opts *Opts) error {
 	if err := envconfig.Process("flow", opts); err != nil {
-		return fmt.Errorf("Could not retrieve environment variables\n%v", err)
+		return fmt.Errorf("Could not retrieve environment variables\n%s", err.Error())
 	}
 	data := []struct {
 		key   string

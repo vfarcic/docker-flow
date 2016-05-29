@@ -33,7 +33,7 @@ func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 		opts.NextColor,
 		opts.BlueGreen,
 	); err != nil {
-		return fmt.Errorf("Failed to create the Docker Flow file\n%v\n", err)
+		return fmt.Errorf("Failed to create the Docker Flow file\n%s\n", err.Error())
 	}
 	logPrintln(fmt.Sprintf("Deploying (%s)...", opts.NextTarget))
 
@@ -68,7 +68,7 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFil
 			opts.CurrentColor,
 			opts.BlueGreen,
 		); err != nil {
-			return fmt.Errorf("Failed to create the Docker Flow file\n%v\n", err)
+			return fmt.Errorf("Failed to create the Docker Flow file\n%s\n", err.Error())
 		}
 	}
 	sc := getServiceDiscovery()

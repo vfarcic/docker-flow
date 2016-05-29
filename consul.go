@@ -18,7 +18,7 @@ func (c Consul) GetScaleCalc(address, serviceName, scale string) (int, error) {
 	inc := 0
 	resp, err := http.Get(fmt.Sprintf("%s/v1/kv/docker-flow/%s/scale?raw", address, serviceName))
 	if err != nil {
-		return 0, fmt.Errorf("Please make sure that Consul address is correct\n%v", err)
+		return 0, fmt.Errorf("Please make sure that Consul address is correct\n%s", err.Error())
 	}
 	defer resp.Body.Close()
 	data, _ := ioutil.ReadAll(resp.Body)
@@ -42,7 +42,7 @@ func (c Consul) GetScaleCalc(address, serviceName, scale string) (int, error) {
 func (c Consul) GetColor(address, serviceName string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/v1/kv/docker-flow/%s/color?raw", address, serviceName))
 	if err != nil {
-		return "", fmt.Errorf("Could not retrieve the color from Consul. Please make sure that Consul address is correct\n%v", err)
+		return "", fmt.Errorf("Could not retrieve the color from Consul. Please make sure that Consul address is correct\n%s", err.Error())
 	}
 	defer resp.Body.Close()
 	data, _ := ioutil.ReadAll(resp.Body)
@@ -74,7 +74,7 @@ func (c Consul) putValue(address, serviceName, key, value string) (string, error
 	request, _ := http.NewRequest("PUT", url, strings.NewReader(value))
 	resp, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("Could not store store information in Consul\n%v", err)
+		return "", fmt.Errorf("Could not store store information in Consul\n%s", err.Error())
 	}
 	defer resp.Body.Close()
 	data, _ := ioutil.ReadAll(resp.Body)

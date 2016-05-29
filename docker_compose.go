@@ -29,7 +29,7 @@ func (dc DockerCompose) CreateFlowFile(dcPath, serviceName, target string, sideT
 	// TODO: Start remove
 	data, err := readFile(dcPath)
 	if err != nil {
-		return fmt.Errorf("Could not read the Docker Compose file %s\n%v", dcPath, err)
+		return fmt.Errorf("Could not read the Docker Compose file %s\n%s", dcPath, err.Error())
 	}
 	s := string(data)
 	// TODO: End remove
@@ -88,14 +88,14 @@ services:`
 	}
 	err = writeFile(dockerComposeFlowPath, []byte(strings.Trim(s, "\n")), 0644)
 	if err != nil {
-		return fmt.Errorf("Could not write the Docker Flow file %s\n%v", dockerComposeFlowPath, err)
+		return fmt.Errorf("Could not write the Docker Flow file %s\n%s", dockerComposeFlowPath, err.Error())
 	}
 	return nil
 }
 
 func (dc DockerCompose) RemoveFlow() error {
 	if err := removeFile(dockerComposeFlowPath); err != nil {
-		return fmt.Errorf("Could not remove the temp file %s\n%v", dockerComposeFlowPath, err)
+		return fmt.Errorf("Could not remove the temp file %s\n%s", dockerComposeFlowPath, err.Error())
 	}
 	return nil
 }
