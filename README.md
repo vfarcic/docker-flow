@@ -142,7 +142,7 @@ eval "$(docker-machine env --swarm swarm-master)"
     --flow=deploy --flow=proxy
 ```
 
-We instructed `docker-flow` to use the *blue-green deployment* process and that the target (defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml)) is *app*. We also told it that the service exposes an API on the address */api/v1/books* and that it requires a side (or secondary) target *db*. Finally, through the `--flow` arguments we specified that the we want it to deploy the targets and reconfigure the proxy. A lot happened in that single command so we'll explore the result in more detail.
+We instructed `docker-flow` to use the *blue-green deployment* process and that the target (defined in [docker-compose.yml](https://github.com/vfarcic/docker-flow/blob/master/docker-compose.yml)) is *app*. We also told it that the service exposes an API on the address */demo that it requires a side (or secondary) target *db*. Finally, through the `--flow` arguments we specified that the we want it to deploy the targets and reconfigure the proxy. A lot happened in that single command so we'll explore the result in more detail.
 
 Let's take a look at our servers and see what happened. We'll start with the Swarm cluster.
 
@@ -408,7 +408,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |    --proxy-reconf-port=             |The port used by the proxy to reconfigure its configuration|
 |-S, --pull-side-targets              |Pull side or auxiliary targets. (**bool**)|
 |-s, --scale=                         |Number of instances to deploy. If the value starts with the plus sign (+), the number of instances will be increased by the given number. If the value begins with the minus sign (-), the number of instances will be decreased by the given number.|
-|    --service-path=                  |Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used. (**multi**)|
+|    --service-path=                  |Path that should be configured in the proxy (e.g. /demo). This argument is required only if the proxy flow step is used. (**multi**)|
 |-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
 |-t, --target=                        |Docker Compose target. (default: app)|
 
