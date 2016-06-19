@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"./compose"
 )
 
 type Flowable interface {
-	Deploy(opts Opts, dc DockerComposable) error
+	Deploy(opts Opts, dc compose.DockerComposer) error
 	GetPullTargets(opts Opts) []string
-	Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error
+	Scale(opts Opts, dc compose.DockerComposer, target string, createFlowFile bool) error
 	Proxy(opts Opts, proxy Proxy) error
 }
 
@@ -24,7 +25,7 @@ func getFlow() Flowable {
 	return flow
 }
 
-func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
+func (m Flow) Deploy(opts Opts, dc compose.DockerComposer) error {
 	if err := dc.CreateFlowFile(
 		opts.ComposePath,
 		opts.ServiceName,
@@ -58,7 +59,7 @@ func (m Flow) Deploy(opts Opts, dc DockerComposable) error {
 	return nil
 }
 
-func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error {
+func (m Flow) Scale(opts Opts, dc compose.DockerComposer, target string, createFlowFile bool) error {
 	if createFlowFile {
 		if err := dc.CreateFlowFile(
 			opts.ComposePath,
@@ -87,6 +88,11 @@ func (m Flow) Scale(opts Opts, dc DockerComposable, target string, createFlowFil
 	}
 	return nil
 }
+
+func (m Flow) Test(opts Opts, dc compose.DockerComposer) {
+}
+
+
 
 func (m Flow) Proxy(opts Opts, proxy Proxy) error {
 	if err := proxy.Provision(

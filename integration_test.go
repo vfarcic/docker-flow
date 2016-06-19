@@ -9,7 +9,7 @@ package main
 // With Docker Machine
 // $ docker-machine create -d virtualbox docker-flow-test
 // $ eval "$(docker-machine env docker-flow-test)"
-// $ go build && go test --cover --tags integration | tee tests.log
+// $ go build && go test integration_test.go --cover --tags integration -v | tee tests.log
 // $ docker-machine rm -f docker-flow-test
 
 import (
@@ -240,6 +240,20 @@ func (s IntegrationTestSuite) Test_Proxy_Templates() {
 	resp, err := http.Get(url)
 	s.NoError(err)
 	s.Equal(200, resp.StatusCode, "Failed to send the request %s", url)
+}
+
+func (s IntegrationTestSuite) Test_TestFlow() {
+	log.Println(">> Integration tests: test flow")
+
+	ok, _ := s.runCmdWithStdOut(
+		true,
+		"./docker-flow",
+		"--consul-address", fmt.Sprintf("http://%s:8500", s.ConsulIp),
+		"--test-compose-path", "docker-compose-test.yml",
+		"--flow", "test:unit",
+	)
+
+	s.True(ok)
 }
 
 // Util

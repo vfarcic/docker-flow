@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"./util"
 )
 
 const containerStatusRunning = 1
@@ -20,11 +21,11 @@ var haProxy Proxy = HaProxy{}
 
 type HaProxy struct{}
 
-var runHaProxyRunCmd = runCmd
-var runHaProxyExecCmd = runCmd
-var runHaProxyCpCmd = runCmd
-var runHaProxyPsCmd = runCmd
-var runHaProxyStartCmd = runCmd
+var runHaProxyRunCmd = func(cmd *exec.Cmd) error { return cmd.Run() }
+var runHaProxyExecCmd = func(cmd *exec.Cmd) error { return cmd.Run() }
+var runHaProxyCpCmd = func(cmd *exec.Cmd) error { return cmd.Run() }
+var runHaProxyPsCmd = func(cmd *exec.Cmd) error { return cmd.Run() }
+var runHaProxyStartCmd = func(cmd *exec.Cmd) error { return cmd.Run() }
 var httpGet = http.Get
 
 func (m HaProxy) Provision(dockerHost, reconfPort, certPath, scAddress string) error {
@@ -34,7 +35,7 @@ func (m HaProxy) Provision(dockerHost, reconfPort, certPath, scAddress string) e
 	if len(scAddress) == 0 {
 		return fmt.Errorf("Service Discovery Address is mandatory.")
 	}
-	SetDockerHost(dockerHost, certPath)
+	util.SetDockerHost(dockerHost, certPath)
 	status, err := m.ps()
 	if err != nil {
 		return err
@@ -46,12 +47,12 @@ func (m HaProxy) Provision(dockerHost, reconfPort, certPath, scAddress string) e
 		if err := m.start(); err != nil {
 			return err
 		}
-		sleep(time.Second * 5)
+		util.Sleep(time.Second * 5)
 	default:
 		if err := m.run(reconfPort, scAddress); err != nil {
 			return err
 		}
-		sleep(time.Second * 5)
+		util.Sleep(time.Second * 5)
 	}
 	return nil
 }
@@ -139,12 +140,12 @@ func (m HaProxy) sendConsulTemplateToTheProxy(dockerHost, dockerCertPath, consul
 	if err := m.copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, file); err != nil {
 		return err
 	}
-	removeFile(fmt.Sprintf("%s.tmp", consulTemplatePath))
+	util.RemoveFile(fmt.Sprintf("%s.tmp", consulTemplatePath))
 	return nil
 }
 
 func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consulTemplatePath, templateName string) error {
-	SetDockerHost(dockerHost, dockerCertPath)
+	util.SetDockerHost(dockerHost, dockerCertPath)
 	args := []string{"exec", "-i", "docker-flow-proxy", "mkdir", "-p", ConsulTemplatesDir}
 	execCmd := exec.Command("docker", args...)
 	execCmd.Stdout = os.Stdout
@@ -170,11 +171,11 @@ func (m HaProxy) copyConsulTemplateToTheProxy(dockerHost, dockerCertPath, consul
 func (m HaProxy) createTempConsulTemplate(consulTemplatePath, serviceName, color string) error {
 	fullServiceName := fmt.Sprintf("%s-%s", serviceName, color)
 	tmpPath := fmt.Sprintf("%s.tmp", consulTemplatePath)
-	data, err := readFile(consulTemplatePath)
+	data, err := util.ReadFile(consulTemplatePath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Consul template %s\n%s", consulTemplatePath, err.Error())
 	}
-	if err := writeFile(
+	if err := util.WriteFile(
 		tmpPath,
 		[]byte(strings.Replace(string(data), "SERVICE_NAME", fullServiceName, -1)),
 		0644,

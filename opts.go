@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"./util"
 )
 
 const dockerFlowPath = "docker-flow.yml"
@@ -22,11 +23,11 @@ var processOpts = ProcessOpts
 type Opts struct {
 	BlueGreen               bool     `short:"b" long:"blue-green" description:"Perform blue-green deployment." yaml:"blue_green" envconfig:"blue_green"`
 	CertPath                string   `long:"cert-path" description:"Docker certification path. If not specified, DOCKER_CERT_PATH environment variable will be used instead." yaml:"cert_path" envconfig:"cert_path"`
-	ComposePath             string   `short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file." yaml:"compose_path" envconfig:"compose_path"`
+	ComposePath             string   `short:"f" long:"compose-path" value-name:"docker-compose.yml" description:"Path to the Docker Compose configuration file. If not specified, the default docker-compose.yml files will be used." yaml:"compose_path" envconfig:"compose_path"`
 	ServiceDiscoveryAddress string   `short:"c" long:"consul-address" description:"The address of the Consul server." yaml:"consul_address" envconfig:"consul_address"`
 	ConsulTemplateBePath    string   `long:"consul-template-be-path" description:"The path to the Consul Template representing snippet of the frontend configuration. If specified, proxy template will be loaded from the specified file." yaml:"consul_template_be_path" envconfig:"consul_template_be_path"`
 	ConsulTemplateFePath    string   `long:"consul-template-fe-path" description:"The path to the Consul Template representing snippet of the frontend configuration. If specified, proxy template will be loaded from the specified file." yaml:"consul_template_fe_path" envconfig:"consul_template_fe_path"`
-	Flow                    []string `short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\nproxy: Reconfigures the proxy\n" yaml:"flow" envconfig:"flow"`
+	Flow                    []string `short:"F" long:"flow" description:"The actions that should be performed as the flow. Multiple values are allowed.\ndeploy: Deploys a new release\nscale: Scales currently running release\nstop-old: Stops the old release\nproxy: Reconfigures the proxy\ntest:[TARGET]: Runs a test target specified through the test-docker-compose argument.\n" yaml:"flow" envconfig:"flow"`
 	Host                    string   `short:"H" long:"host" description:"Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead."`
 	Project                 string   `short:"p" long:"project" description:"Docker Compose project. If not specified, the current directory will be used instead."`
 	ProxyDockerCertPath     string   `long:"proxy-docker-cert-path" description:"Docker certification path for the proxy host." yaml:"proxy_docker_cert_path" envconfig:"proxy_docker_cert_path"`
@@ -38,14 +39,14 @@ type Opts struct {
 	ServicePath             []string `long:"service-path" description:"Path that should be configured in the proxy (e.g. /api/v1/my-service). This argument is required only if the proxy flow step is used." yaml:"service_path"`
 	SideTargets             []string `short:"T" long:"side-target" description:"Side or auxiliary Docker Compose targets. Multiple values are allowed." yaml:"side_targets"`
 	Target                  string   `short:"t" long:"target" description:"Docker Compose target."`
-
-	ServiceName      string
-	CurrentColor     string
-	NextColor        string
-	CurrentTarget    string
-	NextTarget       string
-	ConsulTemplateFe string
-	ConsulTemplateBe string
+	TestComposePath         string   `long:"test-compose-path" description:"Path to the Docker Compose configuration file used for tests. If not specified, the default docker-compose.yml files will be used." yaml:"test_compose_path" envconfig:"test_compose_path"`
+	ServiceName             string
+	CurrentColor            string
+	NextColor               string
+	CurrentTarget           string
+	NextTarget              string
+	ConsulTemplateFe        string
+	ConsulTemplateBe        string
 }
 
 var GetOpts = func() (Opts, error) {
@@ -69,7 +70,7 @@ var GetOpts = func() (Opts, error) {
 }
 
 func ParseYml(opts *Opts) error {
-	data, err := readFile(dockerFlowPath)
+	data, err := util.ReadFile(dockerFlowPath)
 	if err != nil {
 		return nil
 	}
@@ -125,14 +126,14 @@ func ProcessOpts(opts *Opts) (err error) {
 		}
 	}
 	if len(opts.ConsulTemplateFePath) > 0 {
-		data, err := readFile(opts.ConsulTemplateFePath)
+		data, err := util.ReadFile(opts.ConsulTemplateFePath)
 		if err != nil {
 			return fmt.Errorf("Consul Template %s could not be loaded", opts.ConsulTemplateFePath)
 		}
 		opts.ConsulTemplateFe = string(data)
 	}
 	if len(opts.ConsulTemplateBePath) > 0 {
-		data, err := readFile(opts.ConsulTemplateBePath)
+		data, err := util.ReadFile(opts.ConsulTemplateBePath)
 		if err != nil {
 			return fmt.Errorf("Consul Template %s could not be loaded", opts.ConsulTemplateBePath)
 		}

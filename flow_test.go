@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
+	"./compose"
 )
 
 type FlowTestSuite struct {
 	suite.Suite
 	opts Opts
-	dc   DockerComposable
+	dc   compose.DockerComposer
 }
 
 func (s *FlowTestSuite) SetupTest() {
@@ -38,7 +39,7 @@ func (s *FlowTestSuite) SetupTest() {
 		return s.opts, nil
 	}
 	s.dc = getDockerComposeMock(s.opts, "")
-	dockerCompose = s.dc
+	compose.GetDockerCompose = func() compose.DockerComposer{ return s.dc }
 	flow = getFlowMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
 	logFatal = func(v ...interface{}) {}
@@ -574,7 +575,7 @@ type FlowMock struct {
 	mock.Mock
 }
 
-func (m *FlowMock) Deploy(opts Opts, dc DockerComposable) error {
+func (m *FlowMock) Deploy(opts Opts, dc compose.DockerComposer) error {
 	args := m.Called(opts, dc)
 	return args.Error(0)
 }
@@ -584,7 +585,7 @@ func (m *FlowMock) GetPullTargets(opts Opts) []string {
 	return []string{}
 }
 
-func (m *FlowMock) Scale(opts Opts, dc DockerComposable, target string, createFlowFile bool) error {
+func (m *FlowMock) Scale(opts Opts, dc compose.DockerComposer, target string, createFlowFile bool) error {
 	args := m.Called(opts, dc, target, createFlowFile)
 	return args.Error(0)
 }

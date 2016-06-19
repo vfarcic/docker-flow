@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"./util"
 )
 
 type HaProxyTestSuite struct {
@@ -70,9 +71,9 @@ func (s *HaProxyTestSuite) SetupTest() {
 
 func (s HaProxyTestSuite) Test_Provision_SetsDockerHost() {
 	actual := ""
-	SetDockerHostOrig := SetDockerHost
-	defer func() { SetDockerHost = SetDockerHostOrig }()
-	SetDockerHost = func(host, certPath string) {
+	SetDockerHostOrig := util.SetDockerHost
+	defer func() { util.SetDockerHost = SetDockerHostOrig }()
+	util.SetDockerHost = func(host, certPath string) {
 		actual = host
 	}
 
@@ -439,16 +440,16 @@ func (s HaProxyTestSuite) Test_Reconfigure_CreatesTempTemplateFile() {
 	actualData := ""
 	data := "This is a %s template"
 	expectedData := fmt.Sprintf(data, s.ServiceName+"-"+s.Color)
-	writeFileOrig := writeFile
-	defer func() { writeFile = writeFileOrig }()
-	writeFile = func(filename string, data []byte, perm os.FileMode) error {
+	writeFileOrig := util.WriteFile
+	defer func() { util.WriteFile = writeFileOrig }()
+	util.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		actualFilenames = append(actualFilenames, filename)
 		actualData = string(data)
 		return nil
 	}
-	readFileOrig := readFile
-	defer func() { readFile = readFileOrig }()
-	readFile = func(fileName string) ([]byte, error) {
+	readFileOrig := util.ReadFile
+	defer func() { util.ReadFile = readFileOrig }()
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(fmt.Sprintf(data, "SERVICE_NAME")), nil
 	}
 
@@ -460,9 +461,9 @@ func (s HaProxyTestSuite) Test_Reconfigure_CreatesTempTemplateFile() {
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTemplateFileReadFails() {
-	readFileOrig := readFile
-	defer func() { readFile = readFileOrig }()
-	readFile = func(fileName string) ([]byte, error) {
+	readFileOrig := util.ReadFile
+	defer func() { util.ReadFile = readFileOrig }()
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an read file error")
 	}
 
@@ -472,9 +473,9 @@ func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTemplateFileReadFail
 }
 
 func (s HaProxyTestSuite) Test_Reconfigure_ReturnsError_WhenTempTemplateFileCreationFails() {
-	writeFileOrig := writeFile
-	defer func() { writeFile = writeFileOrig }()
-	writeFile = func(filename string, data []byte, perm os.FileMode) error {
+	writeFileOrig := util.WriteFile
+	defer func() { util.WriteFile = writeFileOrig }()
+	util.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		return fmt.Errorf("This is an write file error")
 	}
 
@@ -491,9 +492,9 @@ func (s HaProxyTestSuite) Test_Reconfigure_RemovesTempTemplateFile() {
 		fmt.Sprintf("%s.tmp", bePath),
 	}
 	var actual []string
-	removeFileOrig := removeFile
-	defer func() { removeFile = removeFileOrig }()
-	removeFile = func(name string) error {
+	removeFileOrig := util.RemoveFile
+	defer func() { util.RemoveFile = removeFileOrig }()
+	util.RemoveFile = func(name string) error {
 		actual = append(actual, name)
 		return nil
 	}
@@ -508,7 +509,7 @@ func (s HaProxyTestSuite) Test_Reconfigure_RemovesTempTemplateFile() {
 func TestHaProxyTestSuite(t *testing.T) {
 	logPrintln = func(v ...interface{}) {}
 	logPrintf = func(format string, v ...interface{}) {}
-	sleep = func(d time.Duration) {}
+	util.Sleep = func(d time.Duration) {}
 	dockerHost := os.Getenv("DOCKER_HOST")
 	dockerCertPath := os.Getenv("DOCKER_CERT_PATH")
 	runHaProxyExecCmd = func(cmd *exec.Cmd) error {
@@ -517,13 +518,13 @@ func TestHaProxyTestSuite(t *testing.T) {
 	runHaProxyCpCmd = func(cmd *exec.Cmd) error {
 		return nil
 	}
-	writeFile = func(fileName string, data []byte, perm os.FileMode) error {
+	util.WriteFile = func(fileName string, data []byte, perm os.FileMode) error {
 		return nil
 	}
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), nil
 	}
-	removeFile = func(name string) error {
+	util.RemoveFile = func(name string) error {
 		return nil
 	}
 	defer func() {

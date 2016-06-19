@@ -6,12 +6,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"os"
 	"testing"
+	"./compose"
 )
 
 type MainTestSuite struct {
 	suite.Suite
 	opts Opts
-	dc   DockerComposable
+	dc   compose.DockerComposer
 }
 
 func (s *MainTestSuite) SetupTest() {
@@ -31,7 +32,7 @@ func (s *MainTestSuite) SetupTest() {
 		return s.opts, nil
 	}
 	s.dc = getDockerComposeMock(s.opts, "")
-	dockerCompose = s.dc
+	compose.GetDockerCompose = func() compose.DockerComposer { return s.dc }
 	flow = getFlowMock("")
 	haProxy = getProxyMock("")
 	serviceDiscovery = getServiceDiscoveryMock(s.opts, "")
@@ -175,7 +176,7 @@ func (s MainTestSuite) Test_Main_LogsFatal_WhenScaleAndNotDeployAndScaleFails() 
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithCurrentColor_WhenStopOldAndDeployed() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer{ return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -198,7 +199,7 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithCurrentCo
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeCreateFlowFileWithNextColor_WhenStopOldAndNotDeployed() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -229,7 +230,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeCrea
 		mock.Anything,
 		mock.Anything,
 	).Return(fmt.Errorf("This is an error"))
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -246,7 +247,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeCrea
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeStopTargetWithCurrentTarget_WhenStopOldAndDeployed() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -267,7 +268,7 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeStopTargetWithCurrentTarget
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeStopTargetWithNextColor_WhenStopOldAndNotDeployed() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -294,7 +295,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeStop
 		mock.Anything,
 		mock.Anything,
 	).Return(fmt.Errorf("This is an error"))
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -311,7 +312,7 @@ func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeStop
 
 func (s MainTestSuite) Test_Main_DoesNotRunStopOld_WhenStopOldAndNotBlueGreen() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		s.opts.BlueGreen = false
@@ -331,7 +332,7 @@ func (s MainTestSuite) Test_Main_DoesNotRunStopOld_WhenStopOldAndNotBlueGreen() 
 
 func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow_WhenStopOld() {
 	mockObj := getDockerComposeMock(s.opts, "")
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	GetOpts = func() (Opts, error) {
 		s.opts.Flow = []string{"stop-old"}
 		return s.opts, nil
@@ -345,7 +346,7 @@ func (s MainTestSuite) Test_Main_InvokesDockerComposeRemoveFlow_WhenStopOld() {
 func (s MainTestSuite) Test_Main_InvokesLogFatal_WhenStopOldAndDockerComposeRemoveFlowFails() {
 	mockObj := getDockerComposeMock(s.opts, "RemoveFlow")
 	mockObj.On("RemoveFlow").Return(fmt.Errorf("This is an error"))
-	dockerCompose = mockObj
+	compose.GetDockerCompose = func() compose.DockerComposer { return mockObj }
 	actual := false
 	logFatal = func(v ...interface{}) {
 		actual = true

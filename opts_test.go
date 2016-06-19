@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"./util"
 )
 
 // Setup
@@ -34,7 +35,7 @@ func (s *OptsTestSuite) SetupTest() {
 	getWd = func() (string, error) {
 		return path, nil
 	}
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), nil
 	}
 }
@@ -223,7 +224,7 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsFlowToDeploy_WhenEmpty() {
 
 func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFeFileDoesNotExist() {
 	s.opts.ConsulTemplateFePath = "/this/path/does/not/exist"
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
 
@@ -234,7 +235,7 @@ func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateFeFileDoe
 
 func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateBeFileDoesNotExist() {
 	s.opts.ConsulTemplateBePath = "/this/path/does/not/exist"
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
 
@@ -246,7 +247,7 @@ func (s OptsTestSuite) Test_ProcessOpts_ReturnsError_WhenConsulTemplateBeFileDoe
 func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplateFe_WhenConsulTemplateFileIsSpecified() {
 	expected := "This is content of a Consul Template"
 	s.opts.ConsulTemplateFePath = "/this/path/does/not/exist"
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(expected), nil
 	}
 
@@ -258,7 +259,7 @@ func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplateFe_WhenConsulTemplateF
 func (s OptsTestSuite) Test_ProcessOpts_SetsConsulTemplateBe_WhenConsulTemplateFileIsSpecified() {
 	expected := "This is content of a Consul Template"
 	s.opts.ConsulTemplateBePath = "/this/path/does/not/exist"
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(expected), nil
 	}
 
@@ -288,6 +289,7 @@ func (s OptsTestSuite) Test_ParseEnvVars_Strings() {
 		{"4357", "FLOW_PROXY_RECONF_PORT", &s.opts.ProxyReconfPort},
 		{"myConsulTemplateFePath", "FLOW_CONSUL_TEMPLATE_FE_PATH", &s.opts.ConsulTemplateFePath},
 		{"myConsulTemplateBePath", "FLOW_CONSUL_TEMPLATE_BE_PATH", &s.opts.ConsulTemplateBePath},
+		{"myTestComposePath", "FLOW_TEST_COMPOSE_PATH", &s.opts.TestComposePath},
 	}
 	for _, d := range data {
 		os.Setenv(d.key, d.expected)
@@ -381,6 +383,7 @@ func (s OptsTestSuite) Test_ParseArgs_LongStrings() {
 		{"1234", "proxy-reconf-port", &s.opts.ProxyReconfPort},
 		{"consulTemplateFePathFromArgs", "consul-template-fe-path", &s.opts.ConsulTemplateFePath},
 		{"consulTemplateBePathFromArgs", "consul-template-be-path", &s.opts.ConsulTemplateBePath},
+		{"testComposePathFromArgs", "test-compose-path", &s.opts.TestComposePath},
 	}
 
 	for _, d := range data {
@@ -524,7 +527,7 @@ func (s OptsTestSuite) Test_ParseYml_ReturnsNil() {
 }
 
 func (s OptsTestSuite) Test_ParseYml_ReturnsNil_WhenReadFileFails() {
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(""), fmt.Errorf("This is an error")
 	}
 
@@ -534,7 +537,7 @@ func (s OptsTestSuite) Test_ParseYml_ReturnsNil_WhenReadFileFails() {
 }
 
 func (s OptsTestSuite) Test_ParseYml_ReturnsError_WhenUnmarshalFails() {
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte("This is not a proper YML"), nil
 	}
 
@@ -547,6 +550,7 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 	host := "hostFromYml"
 	certPath := "certPathFromYml"
 	composePath := "composePathFromYml"
+	testComposePath := "testComposePathFromYml"
 	target := "targetFromYml"
 	sideTarget1 := "sideTarget1FromYml"
 	sideTarget2 := "sideTarget2FromYml"
@@ -567,6 +571,7 @@ func (s OptsTestSuite) Test_ParseYml_SetsOpts() {
 host: %s
 cert_path: %s
 compose_path: %s
+test_compose_path: %s
 blue_green: true
 target: %s
 side_targets:
@@ -589,12 +594,12 @@ service_path:
   - %s
 consul_template_fe_path: %s
 consul_template_be_path: %s`,
-		host, certPath, composePath, target, sideTarget1, sideTarget2,
+		host, certPath, composePath, testComposePath, target, sideTarget1, sideTarget2,
 		project, consulAddress, scale, proxyHost, proxyDockerHost,
 		proxyDockerCertPath, proxyReconfPort, flow1, flow2, path1,
 		path2, consulTemplateFePath, consulTemplateBePath,
 	)
-	readFile = func(fileName string) ([]byte, error) {
+	util.ReadFile = func(fileName string) ([]byte, error) {
 		return []byte(yml), nil
 	}
 
@@ -602,6 +607,7 @@ consul_template_be_path: %s`,
 
 	s.Equal(host, s.opts.Host)
 	s.Equal(composePath, s.opts.ComposePath)
+	s.Equal(testComposePath, s.opts.TestComposePath)
 	s.True(s.opts.BlueGreen)
 	s.Equal(target, s.opts.Target)
 	s.Equal([]string{sideTarget1, sideTarget2}, s.opts.SideTargets)

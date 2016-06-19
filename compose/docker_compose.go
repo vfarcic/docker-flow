@@ -1,19 +1,17 @@
-package main
+package compose
 
 import (
 	"fmt"
-	"os"
+	"../util"
 	"strings"
+	"os"
 )
 
 const dockerComposeFlowPath = "docker-compose-flow.yml.tmp"
 
-var dockerCompose DockerComposable = DockerCompose{}
-var getDockerCompose = func() DockerComposable {
-	return dockerCompose
-}
+var dockerCompose DockerComposer = DockerCompose{}
 
-type DockerComposable interface {
+type DockerComposer interface {
 	CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error
 	RemoveFlow() error
 	PullTargets(host, certPath, project string, targets []string) error
@@ -25,9 +23,13 @@ type DockerComposable interface {
 
 type DockerCompose struct{}
 
+var GetDockerCompose = func() DockerComposer {
+	return dockerCompose
+}
+
 func (dc DockerCompose) CreateFlowFile(dcPath, serviceName, target string, sideTargets []string, color string, blueGreen bool) error {
 	// TODO: Start remove
-	data, err := readFile(dcPath)
+	data, err := util.ReadFile(dcPath)
 	if err != nil {
 		return fmt.Errorf("Could not read the Docker Compose file %s\n%s", dcPath, err.Error())
 	}
@@ -86,7 +88,7 @@ services:`
 			sideTarget,
 		)
 	}
-	err = writeFile(dockerComposeFlowPath, []byte(strings.Trim(s, "\n")), 0644)
+	err = util.WriteFile(dockerComposeFlowPath, []byte(strings.Trim(s, "\n")), 0644)
 	if err != nil {
 		return fmt.Errorf("Could not write the Docker Flow file %s\n%s", dockerComposeFlowPath, err.Error())
 	}
@@ -94,7 +96,7 @@ services:`
 }
 
 func (dc DockerCompose) RemoveFlow() error {
-	if err := removeFile(dockerComposeFlowPath); err != nil {
+	if err := util.RemoveFile(dockerComposeFlowPath); err != nil {
 		return fmt.Errorf("Could not remove the temp file %s\n%s", dockerComposeFlowPath, err.Error())
 	}
 	return nil
@@ -142,7 +144,7 @@ func (dc DockerCompose) StopTargets(host, certPath, project string, targets []st
 
 func (dc DockerCompose) getArgs(host, certPath, project string) []string {
 	args := []string{"-f", dockerComposeFlowPath}
-	SetDockerHost(host, certPath)
+	util.SetDockerHost(host, certPath)
 	if len(project) > 0 {
 		args = append(args, "-p", project)
 	}
@@ -151,10 +153,10 @@ func (dc DockerCompose) getArgs(host, certPath, project string) []string {
 
 func (dc DockerCompose) runCmd(host, certPath, project string, args []string) error {
 	args = append(dc.getArgs(host, certPath, project), args...)
-	cmd := execCmd("docker-compose", args...)
+	cmd := util.ExecCmd("docker-compose", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if err := util.RunCmd(cmd); err != nil {
 		return fmt.Errorf("Docker Compose command: docker-compose %s\n%s", strings.Join(cmd.Args, ","), err.Error())
 	}
 	return nil

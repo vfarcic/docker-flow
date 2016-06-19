@@ -398,7 +398,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |-c, --consul-address=                |The address of the Consul server.|
 |    --consul-template-be-path=          |The path to the Consul Template representing snippet of the backend configuration. If specified, proxy template will be loaded from the specified file.|
 |    --consul-template-fe-path=          |The path to the Consul Template representing snippet of the frontend configuration. If specified, proxy template will be loaded from the specified file.|
-|-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>(default: [deploy]) (**multi**)|
+|-F, --flow=                          |The actions that should be performed as the flow. Multiple values are allowed.<br>**deploy**: Deploys a new release<br>**scale**: Scales currently running release<br>**stop-old**: Stops the old release<br>**proxy**: Reconfigures the proxy<br>**test:[TARGET]**: Runs a test target specified through the test-docker-compose argument<br>(default: [deploy]) (**multi**)|
 |-h, --help                           |Show this help message|
 |-H, --host=                          |Docker daemon socket to connect to. If not specified, DOCKER_HOST environment variable will be used instead.|
 |-p, --project=                       |Docker Compose project. If not specified, the current directory will be used instead.|
@@ -411,6 +411,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |    --service-path=                  |Path that should be configured in the proxy (e.g. /demo). This argument is required only if the proxy flow step is used. (**multi**)|
 |-T, --side-target=                   |Side or auxiliary Docker Compose targets. Multiple values are allowed. (default: [db]) (**multi**)|
 |-t, --target=                        |Docker Compose target. (default: app)|
+|--test-compose-path=                 |Path to the Docker Compose configuration file used for tests. (default: docker-compose.yml)|
 
 ### Mappings from command line arguments to YML and environment variables
 
@@ -434,6 +435,7 @@ Arguments can be specified through *docker-flow.yml* file, environment variables
 |    --service-path=                  |service_path           |FLOW_SERVICE_PATH           |
 |-T, --side-target=                   |side_targets           |FLOW_SIDE_TARGETS           |
 |-t, --target=                        |target                 |FLOW_TARGET                 |
+|--test-compose-path                  |test_compose_path      |FLOW_TEST_COMPOSE_PATH      |
 
 
 Arguments can be strings, boolean, or multiple values. Command line arguments of boolean type do not have any value (i.e. *--blue-green*). Environment variables and YML arguments of boolean type should use *true* as value (i.e. *FLOW_BLUE_GREEN=true* and *blue_green: true*). When allowed, multiple values can be specified by repeating the command line argument (e.g. *--flow=deploy --flow=stop-old*). When specified through environment variables, multiple values should be separated with comma (e.g. *FLOW=deploy,stop-old*). YML accepts multiple values through the standard format.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"./compose"
 )
 
 func init() {
@@ -27,7 +28,7 @@ func main() {
 	if err != nil {
 		logFatal(err)
 	}
-	dc := getDockerCompose()
+	dc := compose.GetDockerCompose()
 
 	for _, step := range opts.Flow {
 		switch strings.ToLower(step) {
